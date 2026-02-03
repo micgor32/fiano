@@ -113,6 +113,9 @@ const (
 
 	// ACHeaderVersion4 is version "4.0 for SINIT ACM of BtG"
 	ACHeaderVersion4 = ACModuleHeaderVersion(0x00040000)
+
+	// ACHeaderVersion4 is version "5.0 for SINIT ACM of BtG"
+	ACHeaderVersion5 = ACModuleHeaderVersion(0x00050004)
 )
 
 func (ver ACModuleHeaderVersion) GoString() string {
@@ -557,6 +560,77 @@ func (entryData *EntrySACMData4) GetXMSSSig() []byte { return entryData.XMSSSig[
 // GetScratch returns the Scratch field value
 func (entryData *EntrySACMData4) GetScratch() []byte { return entryData.Scratch[:] }
 
+type EntrySACMData5 struct {
+	EntrySACMDataCommon
+
+	RSAPubKey  [384]byte
+	RSASig     [384]byte
+	XMSSPubKey [64]byte
+	XMSSSig    [2692]byte
+	Reserved   [60]byte
+	Scratch    [3584]byte
+}
+
+var entrySACMData5Size = uint(binary.Size(EntrySACMData5{}))
+
+// Read parses the ACM v5 headers
+func (entryData *EntrySACMData5) Read(b []byte) (int, error) {
+	n, err := entryData.ReadFrom(bytesextra.NewReadWriteSeeker(b))
+	return int(n), err
+}
+
+// ReadFrom parses the ACM v3 headers
+func (entryData *EntrySACMData5) ReadFrom(r io.Reader) (int64, error) {
+	err := binary.Read(r, binary.LittleEndian, entryData)
+	if err != nil {
+		return -1, err
+	}
+	return int64(entrySACMData5Size), nil
+}
+
+// Write compiles the SACM v3 headers into a binary representation
+func (entryData *EntrySACMData5) Write(b []byte) (int, error) {
+	n, err := entryData.WriteTo(bytesextra.NewReadWriteSeeker(b))
+	return int(n), err
+}
+
+// WriteTo compiles the SACM v3 headers into a binary representation
+func (entryData *EntrySACMData5) WriteTo(w io.Writer) (int64, error) {
+	err := binary.Write(w, binary.LittleEndian, entryData)
+	if err != nil {
+		return -1, err
+	}
+	return int64(entrySACMData5Size), nil
+}
+
+// GetRSAPubKey returns the RSA public key
+func (entryData *EntrySACMData5) GetRSAPubKey() rsa.PublicKey {
+	pubKey := rsa.PublicKey{
+		N: big.NewInt(0),
+		E: 0x10001, // see Table 9. "RSAPubExp" of https://www.intel.com/content/www/us/en/software-developers/txt-software-development-guide.html
+	}
+	pubKey.N.SetBytes(entryData.RSAPubKey[:])
+	return pubKey
+}
+
+// GetRSASig returns the RSA signature.
+func (entryData *EntrySACMData5) GetRSASig() []byte { return entryData.RSASig[:] }
+
+// RSASigBinaryOffset returns the RSA signature offset
+func (entryData *EntrySACMData5) RSASigBinaryOffset() uint64 {
+	return uint64(binary.Size(entryData.EntrySACMDataCommon)) +
+		uint64(binary.Size(entryData.RSAPubKey))
+}
+
+// GetXMSSPubKey returns the XMSS public key
+func (entryData *EntrySACMData5) GetXMSSPubKey() []byte { return entryData.XMSSPubKey[:] }
+
+// GetXMSSSig returns the XMSS signature.
+func (entryData *EntrySACMData5) GetXMSSSig() []byte { return entryData.XMSSSig[:] }
+
+// GetScratch returns the Scratch field value
+func (entryData *EntrySACMData5) GetScratch() []byte { return entryData.Scratch[:] }
+
 // Read parses the ACM
 func (entryData *EntrySACMData) Read(b []byte) (int, error) {
 	n, err := entryData.ReadFrom(bytesextra.NewReadWriteSeeker(b))
@@ -611,6 +685,8 @@ func (entryData *EntrySACMData) GetCommon() *EntrySACMDataCommon {
 	case *EntrySACMData3:
 		return &data.EntrySACMDataCommon
 	case *EntrySACMData4:
+		return &data.EntrySACMDataCommon
+	case *EntrySACMData5:
 		return &data.EntrySACMDataCommon
 	}
 	return nil
@@ -673,6 +749,9 @@ func ParseSACMData(r io.Reader) (*EntrySACMData, error) {
 	case ACHeaderVersion4:
 		result.EntrySACMDataInterface = &EntrySACMData4{EntrySACMDataCommon: common}
 		requiredKeySize = uint64(len(EntrySACMData4{}.RSAPubKey))
+	case ACHeaderVersion5:
+		result.EntrySACMDataInterface = &EntrySACMData5{EntrySACMDataCommon: common}
+		requiredKeySize = uint64(len(EntrySACMData5{}.RSAPubKey))
 	default:
 		return result, &ErrUnknownACMHeaderVersion{ACHeaderVersion: common.HeaderVersion}
 	}
