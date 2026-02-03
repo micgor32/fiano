@@ -10,5 +10,6 @@ package cbntbootpolicy
 type PCD struct {
 	StructInfo `id:"__PCDS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
 	Reserved0  [2]byte `json:"pcdReserved0,omitempty"`
+	SizeOfData [2]byte `json:"pcdSizeOfData,omitempty"`
 	Data       []byte  `json:"pcdData"`
 }

@@ -43,7 +43,6 @@ func NewPCD() *PCD {
 // Validate (recursively) checks the structure if there are any unexpected
 // values. It returns an error if so.
 func (s *PCD) Validate() error {
-
 	return nil
 }
 
@@ -108,10 +107,23 @@ func (s *PCD) ReadDataFrom(r io.Reader) (int64, error) {
 	// Data (ManifestFieldType: arrayDynamic)
 	{
 		var size uint16
-		err := binary.Read(r, binary.LittleEndian, &size)
+		err := binary.Read(r, binary.LittleEndian, &s.SizeOfData)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to the read size of field 'Data': %w", err)
 		}
+
+		// FIXUP: The issue is that size is only the size of the first element. If Header Size + size != Total Size
+		// We have to manually calculate this
+		size = binary.LittleEndian.Uint16(s.SizeOfData[:])
+		guessedSize := s.StructInfoTotalSize()
+		guessedSize += s.Reserved0TotalSize()
+		guessedSize += 2
+		guessedSize += uint64(size)
+
+		if guessedSize != uint64(s.ElementSize) {
+			size = s.ElementSize - uint16(s.StructInfoTotalSize()) - 2 - 2 // 2 for Reserved0, 2 for Size Field
+		}
+
 		totalN += int64(binary.Size(size))
 		s.Data = make([]byte, size)
 		n, err := len(s.Data), binary.Read(r, binary.LittleEndian, s.Data)
@@ -164,7 +176,7 @@ func (s *PCD) WriteTo(w io.Writer) (int64, error) {
 	// Data (ManifestFieldType: arrayDynamic)
 	{
 		size := uint16(len(s.Data))
-		err := binary.Write(w, binary.LittleEndian, size)
+		err := binary.Write(w, binary.LittleEndian, s.SizeOfData)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write the size of field 'Data': %w", err)
 		}
@@ -217,6 +229,10 @@ func (s *PCD) TotalSize() uint64 {
 		return 0
 	}
 
+	if s.ElementSize != 0 {
+		return uint64(s.ElementSize)
+	}
+	
 	var size uint64
 	size += s.StructInfoTotalSize()
 	size += s.Reserved0TotalSize()

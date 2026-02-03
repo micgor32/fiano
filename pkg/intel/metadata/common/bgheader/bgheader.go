@@ -26,6 +26,7 @@ type BootGuardVersion uint8
 const (
 	Version10 BootGuardVersion = 1
 	Version20 BootGuardVersion = 2
+	Version21 BootGuardVersion = 3
 )
 
 func (bgv BootGuardVersion) String() string {
@@ -34,6 +35,8 @@ func (bgv BootGuardVersion) String() string {
 		return "1.0"
 	case Version20:
 		return "2.0"
+	case Version21:
+		return "2.1"
 	}
 	return "unknown"
 }
@@ -48,11 +51,26 @@ func DetectBGV(r io.ReadSeeker) (BootGuardVersion, error) {
 	if err != nil {
 		return 0, err
 	}
-	if s.Version >= 0x20 {
-		return Version20, nil
-	} else if (s.Version < 0x20) && (s.Version >= 0x10) {
+	// if s.Version >= 0x20 {
+	// 	return Version20, nil
+	// } else if (s.Version < 0x20) && (s.Version >= 0x10) {
+	// 	return Version10, nil
+	// } else {
+
+	switch s.Version {
+	case 0x10:
 		return Version10, nil
-	} else {
+	case 0x20:
+		fallthrough
+	case 0x21:
+		return Version20, nil
+	case 0x22:
+		fallthrough
+	case 0x23:
+		fallthrough
+	case 0x25:
+		return Version21, nil
+	default:
 		return 0, fmt.Errorf("couldn't detect version")
 	}
 }
