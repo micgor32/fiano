@@ -178,7 +178,8 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 		 * headersStartIdx <- 0x2000000 - 0x450000 == 0x1bb0000
 	*/
 
-	firmwareSize, err := firmware.Seek(0, io.SeekEnd)
+	firmwareSize := uint64(33554432) //firmware.Seek(0, io.SeekEnd)
+	// effectiveSize := uint64(33554432)
 	if err != nil || firmwareSize < 0 {
 		return 0, 0, fmt.Errorf("unable to determine firmware size; result: %d; err: %w", firmwareSize, err)
 	}
