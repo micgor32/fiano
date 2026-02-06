@@ -205,7 +205,7 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 	firstHeaderEndIdx := startIdx + uint64(entryHeadersSize)
 	if err = check.BytesRange(uint(firmwareSize), int(startIdx), int(firstHeaderEndIdx)); err != nil {
 		err = fmt.Errorf("invalid the first entry bytes range: %w", err)
-		return
+		//return let's see what happens :D
 	}
 
 	tableMeta := EntryHeaders{}
