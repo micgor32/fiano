@@ -183,6 +183,8 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 		return 0, 0, fmt.Errorf("unable to determine firmware size; result: %d; err: %w", firmwareSize, err)
 	}
 
+	fmt.Printf("fw size %d\n", firmwareSize)
+
 	fitPointerStartIdx, fitPointerEndIdx := GetPointerCoordinates(uint64(firmwareSize))
 
 	if err := check.BytesRange(uint(firmwareSize), int(fitPointerStartIdx), int(fitPointerEndIdx)); err != nil {
@@ -196,6 +198,8 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 	fitPointerValue := binary.LittleEndian.Uint64(fitPointerBytes)
 	fitPointerOffset := CalculateTailOffsetFromPhysAddr(fitPointerValue)
 	startIdx = uint64(firmwareSize) - fitPointerOffset
+
+	fmt.Printf("ptval 0x%x, startidx %d\n", fitPointerValue, startIdx)
 
 	// OK, now we need to calculate the end of the headers...
 	//
