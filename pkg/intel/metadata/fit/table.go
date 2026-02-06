@@ -187,6 +187,8 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 
 	fitPointerStartIdx, fitPointerEndIdx := GetPointerCoordinates(uint64(firmwareSize))
 
+	fmt.Printf("fpstidx 0x%x, endidx 0x%x\n", fitPointerStartIdx, fitPointerEndIdx)
+
 	if err := check.BytesRange(uint(firmwareSize), int(fitPointerStartIdx), int(fitPointerEndIdx)); err != nil {
 		return 0, 0, fmt.Errorf("invalid fit pointer bytes range: %w", err)
 	}
