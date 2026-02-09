@@ -186,10 +186,9 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 
 	firmwareSizeUsed := uint64(firmwareSize)
 	if ifdSize, ifdErr := flashSizeFromIFD(firmware, firmwareSizeUsed); ifdErr == nil && ifdSize > 0 && ifdSize <= uint64(firmwareSize) {
+		fmt.Println("using ifd")
 		firmwareSizeUsed = ifdSize
 	}
-
-	//biosSize := int64(32 * 1024 * 1024)
 
 	fmt.Printf("fw size %d, \n", firmwareSizeUsed)
 
@@ -206,7 +205,7 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 		return 0, 0, fmt.Errorf("unable to get FIT pointer value: %w", err)
 	}
 	fitPointerValue := binary.LittleEndian.Uint64(fitPointerBytes)
-	fitPointerOffset := consts.BasePhysAddr - fitPointerValue //CalculateTailOffsetFromPhysAddr(fitPointerValue)
+	fitPointerOffset := CalculateTailOffsetFromPhysAddr(fitPointerValue)
 	startIdx = firmwareSizeUsed - fitPointerOffset
 
 	fmt.Printf("ptval 0x%x, startidx %d\n", fitPointerValue, startIdx)
@@ -289,6 +288,8 @@ func flashSizeFromIFD(firmware io.ReadSeeker, firmwareSize uint64) (uint64, erro
 	if maxEnd == 0 {
 		return 0, fmt.Errorf("no valid regions in flash descriptor")
 	}
+
+	fmt.Printf("fw size from idf %d\n", maxEnd)
 
 	return maxEnd, nil
 }
