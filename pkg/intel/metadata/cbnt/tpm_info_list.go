@@ -1,24 +1,263 @@
-// Copyright 2017-2021 the LinuxBoot Authors. All rights reserved
+// Copyright 2017-2026 the LinuxBoot Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:generate manifestcodegen
-
 package cbnt
 
-// TPM2PCRExtendPolicySupport defined TPM2 PCR Extend policy support.
-type TPM2PCRExtendPolicySupport uint8
+import (
+	"encoding/binary"
+	"fmt"
+	"io"
+	"strings"
 
-// Possible values of TPM2PCRExtendPolicySupport
-const (
-	TPM2PCRExtendIllegal                  TPM2PCRExtendPolicySupport = 0
-	TPM2PCRExtendMaximumAgilityPolicy     TPM2PCRExtendPolicySupport = 1
-	TPM2PCRExtendMaximumPerformancePolicy TPM2PCRExtendPolicySupport = 2
-	TPM2PCRExtendBothPolicies             TPM2PCRExtendPolicySupport = 3
+	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
-// TPMFamilySupport defines TPM family support
-type TPMFamilySupport uint8
+// NewTPMInfoList returns a new instance of TPMInfoList with
+// all default values set.
+func NewTPMInfoList() *TPMInfoList {
+	s := &TPMInfoList{}
+	s.Rehash()
+	return s
+}
+
+// Validate (recursively) checks the structure if there are any unexpected
+// values. It returns an error if so.
+func (s *TPMInfoList) Validate() error {
+
+	return nil
+}
+
+// ReadFrom reads the TPMInfoList from 'r' in format defined in the document #575623.
+func (s *TPMInfoList) ReadFrom(r io.Reader) (int64, error) {
+	totalN := int64(0)
+
+	// Capabilities (ManifestFieldType: endValue)
+	{
+		n, err := 4, binary.Read(r, binary.LittleEndian, &s.Capabilities)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to read field 'Capabilities': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// Algorithms (ManifestFieldType: list)
+	{
+		var count uint16
+		err := binary.Read(r, binary.LittleEndian, &count)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to read the count for field 'Algorithms': %w", err)
+		}
+		totalN += int64(binary.Size(count))
+		s.Algorithms = make([]Algorithm, count)
+
+		for idx := range s.Algorithms {
+			n, err := s.Algorithms[idx].ReadFrom(r)
+			if err != nil {
+				return totalN, fmt.Errorf("unable to read field 'Algorithms[%d]': %w", idx, err)
+			}
+			totalN += int64(n)
+		}
+	}
+
+	return totalN, nil
+}
+
+// RehashRecursive calls Rehash (see below) recursively.
+func (s *TPMInfoList) RehashRecursive() {
+	s.Rehash()
+}
+
+// Rehash sets values which are calculated automatically depending on the rest
+// data. It is usually about the total size field of an element.
+func (s *TPMInfoList) Rehash() {
+}
+
+// WriteTo writes the TPMInfoList into 'w' in format defined in
+// the document #575623.
+func (s *TPMInfoList) WriteTo(w io.Writer) (int64, error) {
+	totalN := int64(0)
+	s.Rehash()
+
+	// Capabilities (ManifestFieldType: endValue)
+	{
+		n, err := 4, binary.Write(w, binary.LittleEndian, &s.Capabilities)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'Capabilities': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// Algorithms (ManifestFieldType: list)
+	{
+		count := uint16(len(s.Algorithms))
+		err := binary.Write(w, binary.LittleEndian, &count)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write the count for field 'Algorithms': %w", err)
+		}
+		totalN += int64(binary.Size(count))
+		for idx := range s.Algorithms {
+			n, err := s.Algorithms[idx].WriteTo(w)
+			if err != nil {
+				return totalN, fmt.Errorf("unable to write field 'Algorithms[%d]': %w", idx, err)
+			}
+			totalN += int64(n)
+		}
+	}
+
+	return totalN, nil
+}
+
+// CapabilitiesSize returns the size in bytes of the value of field Capabilities
+func (s *TPMInfoList) CapabilitiesTotalSize() uint64 {
+	return 4
+}
+
+// AlgorithmsSize returns the size in bytes of the value of field Algorithms
+func (s *TPMInfoList) AlgorithmsTotalSize() uint64 {
+	var size uint64
+	size += uint64(binary.Size(uint16(0)))
+	for idx := range s.Algorithms {
+		size += s.Algorithms[idx].TotalSize()
+	}
+	return size
+}
+
+// CapabilitiesOffset returns the offset in bytes of field Capabilities
+func (s *TPMInfoList) CapabilitiesOffset() uint64 {
+	return 0
+}
+
+// AlgorithmsOffset returns the offset in bytes of field Algorithms
+func (s *TPMInfoList) AlgorithmsOffset() uint64 {
+	return s.CapabilitiesOffset() + s.CapabilitiesTotalSize()
+}
+
+// Size returns the total size of the TPMInfoList.
+func (s *TPMInfoList) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	var size uint64
+	size += s.CapabilitiesTotalSize()
+	size += s.AlgorithmsTotalSize()
+	return size
+}
+
+// PrettyString returns the content of the structure in an easy-to-read format.
+func (s *TPMInfoList) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	var lines []string
+	if withHeader {
+		lines = append(lines, pretty.Header(depth, "TPM Info List", s))
+	}
+	if s == nil {
+		return strings.Join(lines, "\n")
+	}
+	// ManifestFieldType is endValue
+	lines = append(lines, pretty.SubValue(depth+1, "Capabilities", "", &s.Capabilities, opts...)...)
+	// ManifestFieldType is list
+	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("Algorithms: Array of \"TPM Info List\" of length %d", len(s.Algorithms)), s.Algorithms))
+	for i := 0; i < len(s.Algorithms); i++ {
+		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.Algorithms[i].PrettyString(depth+2, true)))
+	}
+	if depth < 1 {
+		lines = append(lines, "")
+	}
+	if depth < 2 {
+		lines = append(lines, "")
+	}
+	return strings.Join(lines, "\n")
+}
+
+// PrettyString returns the bits of the flags in an easy-to-read format.
+func (v TPM2PCRExtendPolicySupport) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	var lines []string
+	if withHeader {
+		lines = append(lines, pretty.Header(depth, "TPM 2 PCR Extend Policy Support", v))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// TotalSize returns the total size measured through binary.Size.
+func (v TPM2PCRExtendPolicySupport) TotalSize() uint64 {
+	return uint64(binary.Size(v))
+}
+
+// WriteTo writes the TPM2PCRExtendPolicySupport into 'w' in binary format.
+func (v TPM2PCRExtendPolicySupport) WriteTo(w io.Writer) (int64, error) {
+	return int64(v.TotalSize()), binary.Write(w, binary.LittleEndian, v)
+}
+
+// ReadFrom reads the TPM2PCRExtendPolicySupport from 'r' in binary format.
+func (v TPM2PCRExtendPolicySupport) ReadFrom(r io.Reader) (int64, error) {
+	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
+}
+
+// PrettyString returns the bits of the flags in an easy-to-read format.
+func (v TPMCapabilities) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	var lines []string
+	if withHeader {
+		lines = append(lines, pretty.Header(depth, "TPM Capabilities", v))
+	}
+	lines = append(lines, pretty.SubValue(depth+1, "TPM 2 PCR Extend Policy Support", "", v.TPM2PCRExtendPolicySupport(), opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "TPM Family Support", "", v.TPMFamilySupport(), opts...)...)
+	return strings.Join(lines, "\n")
+}
+
+// TotalSize returns the total size measured through binary.Size.
+func (v TPMCapabilities) TotalSize() uint64 {
+	return uint64(binary.Size(v))
+}
+
+// WriteTo writes the TPMCapabilities into 'w' in binary format.
+func (v TPMCapabilities) WriteTo(w io.Writer) (int64, error) {
+	return int64(v.TotalSize()), binary.Write(w, binary.LittleEndian, v)
+}
+
+// ReadFrom reads the TPMCapabilities from 'r' in binary format.
+func (v TPMCapabilities) ReadFrom(r io.Reader) (int64, error) {
+	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
+}
+
+// PrettyString returns the bits of the flags in an easy-to-read format.
+func (v TPMFamilySupport) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	var lines []string
+	if withHeader {
+		lines = append(lines, pretty.Header(depth, "TPM Family Support", v))
+	}
+	if v.IsDiscreteTPM12Supported() {
+		lines = append(lines, pretty.SubValue(depth+1, "Is Discrete TPM 12 Supported", "Discrete TPM1.2 is supported", true, opts...)...)
+	} else {
+		lines = append(lines, pretty.SubValue(depth+1, "Is Discrete TPM 12 Supported", "Discrete TPM1.2 is not supported", false, opts...)...)
+	}
+	if v.IsDiscreteTPM20Supported() {
+		lines = append(lines, pretty.SubValue(depth+1, "Is Discrete TPM 20 Supported", "Discrete TPM2.0 is supported", true, opts...)...)
+	} else {
+		lines = append(lines, pretty.SubValue(depth+1, "Is Discrete TPM 20 Supported", "Discrete TPM2.0 is not supported", false, opts...)...)
+	}
+	if v.IsFirmwareTPM20Supported() {
+		lines = append(lines, pretty.SubValue(depth+1, "Is Firmware TPM 20 Supported", "Firmware TPM2.0 is supported", true, opts...)...)
+	} else {
+		lines = append(lines, pretty.SubValue(depth+1, "Is Firmware TPM 20 Supported", "Firmware TPM2.0 is not supported", false, opts...)...)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// TotalSize returns the total size measured through binary.Size.
+func (v TPMFamilySupport) TotalSize() uint64 {
+	return uint64(binary.Size(v))
+}
+
+// WriteTo writes the TPMFamilySupport into 'w' in binary format.
+func (v TPMFamilySupport) WriteTo(w io.Writer) (int64, error) {
+	return int64(v.TotalSize()), binary.Write(w, binary.LittleEndian, v)
+}
+
+// ReadFrom reads the TPMFamilySupport from 'r' in binary format.
+func (v TPMFamilySupport) ReadFrom(r io.Reader) (int64, error) {
+	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
+}
 
 // IsDiscreteTPM12Supported returns true if discrete TPM1.2 is supported.
 // PrettyString-true:  Discrete TPM1.2 is supported
@@ -41,9 +280,6 @@ func (familySupport TPMFamilySupport) IsFirmwareTPM20Supported() bool {
 	return familySupport&(1<<3) != 0
 }
 
-// TPMCapabilities defines TPM capabilities
-type TPMCapabilities uint32
-
 // TPM2PCRExtendPolicySupport returns TPM2PCRExtendPolicySupport
 func (cap TPMCapabilities) TPM2PCRExtendPolicySupport() TPM2PCRExtendPolicySupport {
 	return TPM2PCRExtendPolicySupport(cap & 3)
@@ -52,10 +288,4 @@ func (cap TPMCapabilities) TPM2PCRExtendPolicySupport() TPM2PCRExtendPolicySuppo
 // TPMFamilySupport returns TPMFamilySupport
 func (cap TPMCapabilities) TPMFamilySupport() TPMFamilySupport {
 	return TPMFamilySupport((cap >> 2) & 15)
-}
-
-// TPMInfoList represents TPM capabilities supported by ACM
-type TPMInfoList struct {
-	Capabilities TPMCapabilities
-	Algorithms   []Algorithm
 }

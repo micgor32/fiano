@@ -1,9 +1,6 @@
 // Copyright 2017-2021 the LinuxBoot Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
-//go:generate manifestcodegen
-
 package cbnt
 
 import (
@@ -12,31 +9,14 @@ import (
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
+	"encoding/binary"
 	"fmt"
 	"hash"
+	"io"
 	"strings"
 
+	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 	"github.com/tjfoc/gmsm/sm3"
-)
-
-// Algorithm represents a crypto algorithm value.
-type Algorithm uint16
-
-// Supported algorithms
-const (
-	AlgUnknown Algorithm = 0x0000
-	AlgRSA     Algorithm = 0x0001
-	AlgSHA1    Algorithm = 0x0004
-	AlgSHA256  Algorithm = 0x000B
-	AlgSHA384  Algorithm = 0x000C
-	AlgSHA512  Algorithm = 0x000D
-	AlgNull    Algorithm = 0x0010
-	AlgSM3     Algorithm = 0x0012
-	AlgRSASSA  Algorithm = 0x0014
-	AlgRSAPSS  Algorithm = 0x0016
-	AlgECDSA   Algorithm = 0x0018
-	AlgSM2     Algorithm = 0x001b
-	AlgECC     Algorithm = 0x0023
 )
 
 var hashInfo = []struct {
@@ -138,4 +118,24 @@ func GetAlgFromString(name string) (Algorithm, error) {
 	default:
 		return AlgNull, fmt.Errorf("algorithm name provided unknown")
 	}
+}
+
+// PrettyString returns the bits of the flags in an easy-to-read format.
+func (v Algorithm) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	return v.String()
+}
+
+// TotalSize returns the total size measured through binary.Size.
+func (v Algorithm) TotalSize() uint64 {
+	return uint64(binary.Size(v))
+}
+
+// WriteTo writes the Algorithm into 'w' in binary format.
+func (v Algorithm) WriteTo(w io.Writer) (int64, error) {
+	return int64(v.TotalSize()), binary.Write(w, binary.LittleEndian, v)
+}
+
+// ReadFrom reads the Algorithm from 'r' in binary format.
+func (v Algorithm) ReadFrom(r io.Reader) (int64, error) {
+	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
 }
