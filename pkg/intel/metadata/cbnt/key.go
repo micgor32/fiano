@@ -70,7 +70,7 @@ func (k Key) PubKey() (crypto.PublicKey, error) {
 	case AlgRSA:
 		result := &rsa.PublicKey{
 			N: new(big.Int).SetBytes(reverseBytes(k.Data[4:])),
-			E: int(binaryOrder.Uint32(k.Data)),
+			E: int(BinaryOrder.Uint32(k.Data)),
 		}
 		return result, nil
 	case AlgECC:
@@ -106,7 +106,7 @@ func (k *Key) SetPubKey(key crypto.PublicKey) error {
 		n := key.N.Bytes()
 		k.KeySize.SetInBytes(uint16(len(n)))
 		k.Data = make([]byte, 4+len(n))
-		binaryOrder.PutUint32(k.Data, uint32(key.E))
+		BinaryOrder.PutUint32(k.Data, uint32(key.E))
 		copy(k.Data[4:], reverseBytes(n))
 		return nil
 

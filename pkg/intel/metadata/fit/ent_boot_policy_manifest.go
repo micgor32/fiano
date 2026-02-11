@@ -11,8 +11,8 @@ import (
 	"io"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/bg/bgbootpolicy"
-	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt/cbntbootpolicy"
-	"github.com/linuxboot/fiano/pkg/intel/metadata/common/bgheader"
+	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
+	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt/bootpolicy"
 )
 
 // EntryBootPolicyManifestRecord represents a FIT entry of type "Boot Policy Manifest" (0x0C)
@@ -43,19 +43,19 @@ func (entry *EntryBootPolicyManifestRecord) Reader() *bytes.Reader {
 // ParseData creates EntryBootPolicyManifestRecord from EntryBootPolicyManifest
 func (entry *EntryBootPolicyManifestRecord) ParseData() (*bgbootpolicy.Manifest, *cbntbootpolicy.Manifest, error) {
 	r := bytes.NewReader(entry.DataSegmentBytes)
-	version, err := bgheader.DetectBGV(r)
+	version, err := cbnt.DetectBGV(r)
 	if err != nil {
 		return nil, nil, err
 	}
 	switch version {
-	case bgheader.Version10:
+	case cbnt.Version10:
 		manifest := bgbootpolicy.NewManifest()
 		_, err = manifest.ReadFrom(r)
 		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, nil, err
 		}
 		return manifest, nil, nil
-	case bgheader.Version20:
+	case cbnt.Version20:
 		manifest := cbntbootpolicy.NewManifest()
 		_, err = manifest.ReadFrom(r)
 		if err != nil && !errors.Is(err, io.EOF) {

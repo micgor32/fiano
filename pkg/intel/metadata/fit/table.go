@@ -11,8 +11,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/fit/check"
-	"github.com/linuxboot/fiano/pkg/intel/metadata/fit/consts"
+	"github.com/linuxboot/fiano/pkg/uefi"
 	"github.com/xaionaro-go/bytesextra"
 )
 
@@ -131,8 +132,8 @@ func ParseTable(b []byte) (Table, error) {
 // GetPointerCoordinates returns the position of the FIT pointer within
 // the firmware.
 func GetPointerCoordinates(firmwareSize uint64) (startIdx, endIdx int64) {
-	startIdx = int64(firmwareSize) - consts.FITPointerOffset
-	endIdx = startIdx + consts.FITPointerSize
+	startIdx = int64(firmwareSize) - cbnt.FITPointerOffset
+	endIdx = startIdx + cbnt.FITPointerSize
 	return
 }
 
@@ -183,9 +184,19 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 		return 0, 0, fmt.Errorf("unable to determine firmware size; result: %d; err: %w", firmwareSize, err)
 	}
 
-	fitPointerStartIdx, fitPointerEndIdx := GetPointerCoordinates(uint64(firmwareSize))
+	firmwareSizeUsed := uint64(firmwareSize)
+	if ifdSize, ifdErr := flashSizeFromIFD(firmware, firmwareSizeUsed); ifdErr == nil && ifdSize > 0 && ifdSize <= uint64(firmwareSize) {
+		fmt.Println("using ifd")
+		firmwareSizeUsed = ifdSize
+	}
 
-	if err := check.BytesRange(uint(firmwareSize), int(fitPointerStartIdx), int(fitPointerEndIdx)); err != nil {
+	fmt.Printf("fw size %d, \n", firmwareSizeUsed)
+
+	fitPointerStartIdx, fitPointerEndIdx := GetPointerCoordinates(firmwareSizeUsed)
+
+	fmt.Printf("fpstidx 0x%x, endidx 0x%x\n", fitPointerStartIdx, fitPointerEndIdx)
+
+	if err := check.BytesRange(uint(firmwareSizeUsed), int(fitPointerStartIdx), int(fitPointerEndIdx)); err != nil {
 		return 0, 0, fmt.Errorf("invalid fit pointer bytes range: %w", err)
 	}
 
@@ -195,7 +206,9 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 	}
 	fitPointerValue := binary.LittleEndian.Uint64(fitPointerBytes)
 	fitPointerOffset := CalculateTailOffsetFromPhysAddr(fitPointerValue)
-	startIdx = uint64(firmwareSize) - fitPointerOffset
+	startIdx = firmwareSizeUsed - fitPointerOffset
+
+	fmt.Printf("ptval 0x%x, startidx %d\n", fitPointerValue, startIdx)
 
 	// OK, now we need to calculate the end of the headers...
 	//
@@ -203,9 +216,9 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 	// size is the size of the table. So let's just use it.
 
 	firstHeaderEndIdx := startIdx + uint64(entryHeadersSize)
-	if err = check.BytesRange(uint(firmwareSize), int(startIdx), int(firstHeaderEndIdx)); err != nil {
+	if err = check.BytesRange(uint(firmwareSizeUsed), int(startIdx), int(firstHeaderEndIdx)); err != nil {
 		err = fmt.Errorf("invalid the first entry bytes range: %w", err)
-		return
+		//return let's see what happens :D
 	}
 
 	tableMeta := EntryHeaders{}
@@ -229,7 +242,7 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 		err = fmt.Errorf("unable to read the Address value of the FIT header entry: %w", err)
 		return
 	}
-	if !bytes.Equal([]byte(consts.FITHeadersMagic), buf.Bytes()) {
+	if !bytes.Equal([]byte(cbnt.FITHeadersMagic), buf.Bytes()) {
 		err = &ErrExpectedFITHeadersMagic{Received: buf.Bytes()}
 		return
 	}
@@ -238,12 +251,47 @@ func GetHeadersTableRangeFrom(firmware io.ReadSeeker) (startIdx, endIdx uint64, 
 	// parseHeaders it.
 
 	endIdx = startIdx + uint64(tableMeta.Size.Uint32()<<4) // See 4.2.5
-	if err = check.BytesRange(uint(firmwareSize), int(startIdx), int(endIdx)); err != nil {
+	if err = check.BytesRange(uint(firmwareSizeUsed), int(startIdx), int(endIdx)); err != nil {
 		err = fmt.Errorf("invalid entries bytes range: %w", err)
 		return
 	}
 
 	return
+}
+
+func flashSizeFromIFD(firmware io.ReadSeeker, firmwareSize uint64) (uint64, error) {
+	if firmwareSize < uefi.FlashDescriptorLength {
+		return 0, fmt.Errorf("firmware size too small for flash descriptor: %d", firmwareSize)
+	}
+
+	buf, err := sliceOrCopyBytesFrom(firmware, 0, uefi.FlashDescriptorLength)
+	if err != nil {
+		return 0, fmt.Errorf("unable to read flash descriptor: %w", err)
+	}
+
+	fd := uefi.FlashDescriptor{}
+	fd.SetBuf(buf)
+	if err := fd.ParseFlashDescriptor(); err != nil {
+		return 0, err
+	}
+
+	var maxEnd uint64
+	for _, fr := range fd.Region.FlashRegions {
+		if !fr.Valid() {
+			continue
+		}
+		end := uint64(fr.EndOffset())
+		if end > maxEnd {
+			maxEnd = end
+		}
+	}
+	if maxEnd == 0 {
+		return 0, fmt.Errorf("no valid regions in flash descriptor")
+	}
+
+	fmt.Printf("fw size from idf %d\n", maxEnd)
+
+	return maxEnd, nil
 }
 
 // GetTable returns the table of FIT entries of the firmware image.

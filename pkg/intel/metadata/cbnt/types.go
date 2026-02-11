@@ -135,18 +135,3 @@ type (
 		Algorithms   []Algorithm
 	}
 )
-
-// funcs
-func (svn SVN) SVN() uint8 {
-	return uint8(svn) & 0x0f
-}
-
-// StructInfo just returns StructInfo, it is a handy method if StructInfo
-// is included anonymously to another type.
-func (s StructInfo) StructInfo() StructInfo {
-	return s
-}
-
-func (s StructureID) String() string {
-	return string(s[:])
-}

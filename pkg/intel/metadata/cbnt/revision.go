@@ -1,8 +1,8 @@
-// Copyright 2017-2023 the LinuxBoot Authors. All rights reserved
+// Copyright 2017-2026 the LinuxBoot Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package bgheader
+package cbnt
 
 import (
 	"encoding/binary"
@@ -10,23 +10,9 @@ import (
 	"io"
 )
 
-var (
-	binaryOrder = binary.LittleEndian
-)
+var BinaryOrder = binary.LittleEndian
 
-type structInfo struct {
-	ID      structureID `json:"StructInfoID"`
-	Version uint8       `json:"StructInfoVersion"`
-}
-
-type structureID [8]byte
-
-type BootGuardVersion uint8
-
-const (
-	Version10 BootGuardVersion = 1
-	Version20 BootGuardVersion = 2
-)
+// Well, this can be improved, see comment in cbnt/types.go
 
 func (bgv BootGuardVersion) String() string {
 	switch bgv {
@@ -34,13 +20,15 @@ func (bgv BootGuardVersion) String() string {
 		return "1.0"
 	case Version20:
 		return "2.0"
+	case Version21:
+		return "2.1"
 	}
 	return "unknown"
 }
 
 func DetectBGV(r io.ReadSeeker) (BootGuardVersion, error) {
-	var s structInfo
-	err := binary.Read(r, binaryOrder, &s)
+	var s StructInfo
+	err := binary.Read(r, BinaryOrder, &s)
 	if err != nil {
 		return 0, fmt.Errorf("unable to read field 'ID': %w", err)
 	}
@@ -48,11 +36,21 @@ func DetectBGV(r io.ReadSeeker) (BootGuardVersion, error) {
 	if err != nil {
 		return 0, err
 	}
-	if s.Version >= 0x20 {
-		return Version20, nil
-	} else if (s.Version < 0x20) && (s.Version >= 0x10) {
+
+	switch s.Version {
+	case 0x10:
 		return Version10, nil
-	} else {
+	case 0x20:
+		fallthrough
+	case 0x21:
+		return Version20, nil
+	case 0x22:
+		fallthrough
+	case 0x23:
+		fallthrough
+	case 0x25:
+		return Version21, nil
+	default:
 		return 0, fmt.Errorf("couldn't detect version")
 	}
 }

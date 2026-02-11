@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt/cbntkey"
+	keymanifest "github.com/linuxboot/fiano/pkg/intel/metadata/cbnt/keymanifest"
 	"github.com/stretchr/testify/require"
 	"github.com/xaionaro-go/bytesextra"
 )
@@ -68,7 +68,7 @@ func getSampleEntries(t *testing.T) Entries {
 
 	kmEntry := &EntryKeyManifestRecord{}
 	{
-		km := cbntkey.NewManifest()
+		km := keymanifest.NewManifest()
 		var buf bytes.Buffer
 		_, err := km.WriteTo(&buf)
 		require.NoError(t, err)

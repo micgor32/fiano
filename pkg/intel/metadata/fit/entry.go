@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/fit/check"
-	"github.com/linuxboot/fiano/pkg/intel/metadata/fit/consts"
 	"github.com/xaionaro-go/bytesextra"
 )
 
@@ -148,7 +148,7 @@ func (entries Entries) String() string {
 //
 // What will happen:
 // 1. The FIT headers will be written by offset headersOffset.
-// 2. The FIT pointer will be written at consts.FITPointerOffset offset from the end of the image.
+// 2. The FIT pointer will be written at cbnt.FITPointerOffset offset from the end of the image.
 // 3. Data referenced by FIT headers will be written at offsets accordingly to Address fields (in the headers).
 //
 // Consider calling Rehash() before Inject()/InjectTo()
@@ -171,7 +171,7 @@ func (entries Entries) InjectTo(w io.WriteSeeker, headersOffset uint64) error {
 
 	// Write FIT pointer
 
-	if _, err := w.Seek(-consts.FITPointerOffset, io.SeekEnd); err != nil {
+	if _, err := w.Seek(-cbnt.FITPointerOffset, io.SeekEnd); err != nil {
 		return fmt.Errorf("unable to Seek(%d, %d) to write FIT pointer: %w", headersOffset, io.SeekStart, err)
 	}
 	pointerValue := CalculatePhysAddrFromOffset(headersOffset, uint64(imageSize))
