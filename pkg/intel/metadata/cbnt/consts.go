@@ -58,6 +58,16 @@ const (
 	AlgSM2     Algorithm = 0x001b
 	AlgECC     Algorithm = 0x0023
 
+	// Possible values of TPM2PCRExtendPolicySupport
+	TPM2PCRExtendIllegal                  TPM2PCRExtendPolicySupport = 0
+	TPM2PCRExtendMaximumAgilityPolicy     TPM2PCRExtendPolicySupport = 1
+	TPM2PCRExtendMaximumPerformancePolicy TPM2PCRExtendPolicySupport = 2
+	TPM2PCRExtendBothPolicies             TPM2PCRExtendPolicySupport = 3
+)
+
+// Yes, I know a file called "consts" is not a best place for a variable definition,
+// therefore: FIXME: find a better place for StrictOrderCheck
+var (
 	// StrictOrderCheck defines if elements order checks should be performed.
 	// For example in the Boot Policy Manifest elements could be in a wrong
 	// order. And we still can parse it, but in this way `*Offset` methods
@@ -70,10 +80,4 @@ const (
 	// > The order of the elements and the order of the fields within each
 	// > element are architectural and must be followed.
 	StrictOrderCheck = true
-
-	// Possible values of TPM2PCRExtendPolicySupport
-	TPM2PCRExtendIllegal                  TPM2PCRExtendPolicySupport = 0
-	TPM2PCRExtendMaximumAgilityPolicy     TPM2PCRExtendPolicySupport = 1
-	TPM2PCRExtendMaximumPerformancePolicy TPM2PCRExtendPolicySupport = 2
-	TPM2PCRExtendBothPolicies             TPM2PCRExtendPolicySupport = 3
 )
