@@ -228,18 +228,28 @@ func (s *IBBSegment) PrettyString(depth uint, withHeader bool, opts ...pretty.Op
 
 // NewSE returns a new instance of SE with
 // all default values set.
-func NewSE() *SE {
+func NewSE(bgv cbnt.BootGuardVersion) *SE {
+	var hashAlg cbnt.Algorithm
+
 	s := &SE{}
 	copy(s.StructInfo.ID[:], []byte(StructureIDSE))
-	s.StructInfo.Version = 0x20
-	// Set through tag "required":
-	s.SetNumber = 0
+
+	if bgv == cbnt.Version10 {
+		hashAlg = 0x0b
+		s.StructInfo.Version = 0x10
+	} else {
+		hashAlg = 0x10
+		s.StructInfo.Version = 0x20
+		// Set through tag "required":
+		s.SetNumber = 0
+		// Recursively initializing a child structure:
+		s.OBBHash = *cbnt.NewHashStructure(hashAlg)
+	}
+	
 	// Recursively initializing a child structure:
-	s.PostIBBHash = *cbnt.NewHashStructure()
+	s.PostIBBHash = *cbnt.NewHashStructure(hashAlg)
 	// Recursively initializing a child structure:
 	s.DigestList = *cbnt.NewHashList()
-	// Recursively initializing a child structure:
-	s.OBBHash = *cbnt.NewHashStructure()
 	s.Rehash()
 	return s
 }

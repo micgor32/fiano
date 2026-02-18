@@ -180,10 +180,10 @@ func (s *HashList) PrettyString(depth uint, withHeader bool, opts ...pretty.Opti
 
 // NewHashStructure returns a new instance of HashStructure with
 // all default values set.
-func NewHashStructure() *HashStructure {
+func NewHashStructure(alg Algorithm) *HashStructure {
 	s := &HashStructure{}
-	// Set through tag "default":
-	s.HashAlg = 0x10
+	// For bg pkg, the default one
+	s.HashAlg = alg
 	s.Rehash()
 	return s
 }

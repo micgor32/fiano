@@ -55,7 +55,7 @@ type (
 	// example: the root structure of BPM).
 	ElementsContainer interface {
 		Structure
-		GetFieldByStructID(structID string) interface{}
+		GetFieldByStructID(structID string) any
 	}
 
 	Manifest interface {
@@ -65,11 +65,6 @@ type (
 	HashStructure struct {
 		HashAlg    Algorithm `default:"0x10" json:"hsAlg"`
 		HashBuffer []byte    `json:"hsBuffer"`
-	}
-
-	HashStructureFill struct {
-		HashAlg    Algorithm `default:"0x0b" json:"hsAlg"`
-		HashBuffer []byte    `countValue:"hashSize()" prettyValue:"hashSizePrint()" json:"hsBuffer"`
 	}
 
 	// HashList describes multiple digests
