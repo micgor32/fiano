@@ -31,11 +31,25 @@ var (
 )
 
 // NewManifest returns a new instance of Manifest with
-// all default values set.
-func NewManifest() *Manifest {
+// all default values set. TODO: add error handling maybe,
+// for now it is up to the caller to ensure that half filled
+// struct won't be retirned :D
+func NewManifest(bgv cbnt.BootGuardVersion) *Manifest {
 	s := &Manifest{}
 	copy(s.StructInfo.ID[:], []byte(StructureIDManifest))
-	s.StructInfo.Version = 0x21
+	
+	switch bgv {
+	case cbnt.Version10:
+		s.BGKM = BGManifest{}
+		s.StructInfo.Version = 0x10
+	case cbnt.Version20, cbnt.Version21:
+		s.CBnTKM = CBnTManifest{}
+		s.StructInfo.Version = 0x21
+	default:
+		// think of better way, idk if just returning manifest is
+		// a verry good idea
+		fmt.Println("not supported")	
+	}
 	// Recursively initializing a child structure:
 	s.KeyAndSignature = *cbnt.NewKeySignature()
 	s.Rehash()
@@ -45,11 +59,16 @@ func NewManifest() *Manifest {
 // Validate (recursively) checks the structure if there are any unexpected
 // values. It returns an error if so.
 func (s *Manifest) Validate() error {
-	// See tag "rehashValue"
-	{
+	switch s.StructInfo.Version {
+	case 0x10:
+		if err := s.BGKM.BPKey.Validate(); err != nil {
+			return fmt.Errorf("error on field 'BPKey': %w", err)
+		}
+	case 0x21:
+		// See tag "rehashValue"		
 		expectedValue := uint16(s.KeyAndSignatureOffset())
-		if s.KeyManifestSignatureOffset != expectedValue {
-			return fmt.Errorf("field 'KeyManifestSignatureOffset' expects write-value '%v', but has %v", expectedValue, s.KeyManifestSignatureOffset)
+		if s.CBnTKM.KeyManifestSignatureOffset != expectedValue {
+			return fmt.Errorf("field 'KeyManifestSignatureOffset' expects write-value '%v', but has %v", expectedValue, s.CBnTKM.KeyManifestSignatureOffset)
 		}
 	}
 	// Recursively validating a child structure:
@@ -104,14 +123,15 @@ func (s *Manifest) ReadFrom(r io.Reader) (int64, error) {
 func (s *Manifest) ReadDataFrom(r io.Reader) (int64, error) {
 	totalN := int64(0)
 
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		// ReadDataFrom does not read Struct, use ReadFrom for that.
-	}
+	// Not sure if this comment brings anything, so ill leave it for now
+	// // StructInfo (ManifestFieldType: structInfo)
+	// {
+	// 	// ReadDataFrom does not read Struct, use ReadFrom for that.
+	// }
 
 	// KeyManifestSignatureOffset (ManifestFieldType: endValue)
 	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.KeyManifestSignatureOffset)
+		n, err := 2, binary.Read(r, binary.LittleEndian, &s.CBnTKM.KeyManifestSignatureOffset)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to read field 'KeyManifestSignatureOffset': %w", err)
 		}
@@ -120,7 +140,7 @@ func (s *Manifest) ReadDataFrom(r io.Reader) (int64, error) {
 
 	// Reserved2 (ManifestFieldType: arrayStatic)
 	{
-		n, err := 3, binary.Read(r, binary.LittleEndian, s.Reserved2[:])
+		n, err := 3, binary.Read(r, binary.LittleEndian, s.CBnTKM.Reserved2[:])
 		if err != nil {
 			return totalN, fmt.Errorf("unable to read field 'Reserved2': %w", err)
 		}
@@ -129,7 +149,7 @@ func (s *Manifest) ReadDataFrom(r io.Reader) (int64, error) {
 
 	// Revision (ManifestFieldType: endValue)
 	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.Revision)
+		n, err := 1, binary.Read(r, binary.LittleEndian, &s.CBnTKM.Revision)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to read field 'Revision': %w", err)
 		}
@@ -156,7 +176,7 @@ func (s *Manifest) ReadDataFrom(r io.Reader) (int64, error) {
 
 	// PubKeyHashAlg (ManifestFieldType: endValue)
 	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.PubKeyHashAlg)
+		n, err := 2, binary.Read(r, binary.LittleEndian, &s.CBnTKM.PubKeyHashAlg)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to read field 'PubKeyHashAlg': %w", err)
 		}
@@ -171,10 +191,10 @@ func (s *Manifest) ReadDataFrom(r io.Reader) (int64, error) {
 			return totalN, fmt.Errorf("unable to read the count for field 'Hash': %w", err)
 		}
 		totalN += int64(binary.Size(count))
-		s.Hash = make([]Hash, count)
+		s.CBnTKM.Hash = make([]Hash, count)
 
-		for idx := range s.Hash {
-			n, err := s.Hash[idx].ReadFrom(r)
+		for idx := range s.CBnTKM.Hash {
+			n, err := s.CBnTKM.Hash[idx].ReadFrom(r)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field 'Hash[%d]': %w", idx, err)
 			}
@@ -206,7 +226,7 @@ func (s *Manifest) RehashRecursive() {
 func (s *Manifest) Rehash() {
 	s.Variable0 = 0
 	s.ElementSize = 0
-	s.KeyManifestSignatureOffset = uint16(s.KeyAndSignatureOffset())
+	s.CBnTKM.KeyManifestSignatureOffset = uint16(s.KeyAndSignatureOffset())
 }
 
 // WriteTo writes the Manifest into 'w' in format defined in
@@ -226,7 +246,7 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 
 	// KeyManifestSignatureOffset (ManifestFieldType: endValue)
 	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.KeyManifestSignatureOffset)
+		n, err := 2, binary.Write(w, binary.LittleEndian, &s.CBnTKM.KeyManifestSignatureOffset)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'KeyManifestSignatureOffset': %w", err)
 		}
@@ -235,7 +255,7 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 
 	// Reserved2 (ManifestFieldType: arrayStatic)
 	{
-		n, err := 3, binary.Write(w, binary.LittleEndian, s.Reserved2[:])
+		n, err := 3, binary.Write(w, binary.LittleEndian, s.CBnTKM.Reserved2[:])
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'Reserved2': %w", err)
 		}
@@ -244,7 +264,7 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 
 	// Revision (ManifestFieldType: endValue)
 	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.Revision)
+		n, err := 1, binary.Write(w, binary.LittleEndian, &s.CBnTKM.Revision)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'Revision': %w", err)
 		}
@@ -271,7 +291,7 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 
 	// PubKeyHashAlg (ManifestFieldType: endValue)
 	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.PubKeyHashAlg)
+		n, err := 2, binary.Write(w, binary.LittleEndian, &s.CBnTKM.PubKeyHashAlg)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'PubKeyHashAlg': %w", err)
 		}
@@ -280,14 +300,14 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 
 	// Hash (ManifestFieldType: list)
 	{
-		count := uint16(len(s.Hash))
+		count := uint16(len(s.CBnTKM.Hash))
 		err := binary.Write(w, binary.LittleEndian, &count)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write the count for field 'Hash': %w", err)
 		}
 		totalN += int64(binary.Size(count))
-		for idx := range s.Hash {
-			n, err := s.Hash[idx].WriteTo(w)
+		for idx := range s.CBnTKM.Hash {
+			n, err := s.CBnTKM.Hash[idx].WriteTo(w)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to write field 'Hash[%d]': %w", idx, err)
 			}
@@ -346,8 +366,8 @@ func (s *Manifest) PubKeyHashAlgTotalSize() uint64 {
 func (s *Manifest) HashTotalSize() uint64 {
 	var size uint64
 	size += uint64(binary.Size(uint16(0)))
-	for idx := range s.Hash {
-		size += s.Hash[idx].TotalSize()
+	for idx := range s.CBnTKM.Hash {
+		size += s.CBnTKM.Hash[idx].TotalSize()
 	}
 	return size
 }
@@ -433,21 +453,21 @@ func (s *Manifest) PrettyString(depth uint, withHeader bool, opts ...pretty.Opti
 	// ManifestFieldType is structInfo
 	lines = append(lines, pretty.SubValue(depth+1, "Struct Info", "", &s.StructInfo, opts...)...)
 	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Key Manifest Signature Offset", "", &s.KeyManifestSignatureOffset, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Key Manifest Signature Offset", "", &s.CBnTKM.KeyManifestSignatureOffset, opts...)...)
 	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Reserved 2", "", &s.Reserved2, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Reserved 2", "", &s.CBnTKM.Reserved2, opts...)...)
 	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Revision", "", &s.Revision, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Revision", "", &s.CBnTKM.Revision, opts...)...)
 	// ManifestFieldType is endValue
 	lines = append(lines, pretty.SubValue(depth+1, "KMSVN", "", &s.KMSVN, opts...)...)
 	// ManifestFieldType is endValue
 	lines = append(lines, pretty.SubValue(depth+1, "KMID", "", &s.KMID, opts...)...)
 	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Pub Key Hash Alg", "", &s.PubKeyHashAlg, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Pub Key Hash Alg", "", &s.CBnTKM.PubKeyHashAlg, opts...)...)
 	// ManifestFieldType is list
-	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("Hash: Array of \"Key Manifest\" of length %d", len(s.Hash)), s.Hash))
-	for i := 0; i < len(s.Hash); i++ {
-		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.Hash[i].PrettyString(depth+2, true)))
+	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("Hash: Array of \"Key Manifest\" of length %d", len(s.CBnTKM.Hash)), s.CBnTKM.Hash))
+	for i := 0; i < len(s.CBnTKM.Hash); i++ {
+		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.CBnTKM.Hash[i].PrettyString(depth+2, true)))
 	}
 	if depth < 1 {
 		lines = append(lines, "")
