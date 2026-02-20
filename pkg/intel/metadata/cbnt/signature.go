@@ -8,7 +8,6 @@ package cbnt
 
 import (
 	"crypto"
-	"crypto/rand"
 	"fmt"
 	"math/big"
 
@@ -17,11 +16,6 @@ import (
 	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
-)
-
-var (
-	// RandReader exports the rand.Reader
-	RandReader = rand.Reader
 )
 
 // NewSignature returns a new instance of Signature with
@@ -253,7 +247,7 @@ func (s *Signature) PrettyString(depth uint, withHeader bool, opts ...pretty.Opt
 	return strings.Join(lines, "\n")
 }
 
-func (m Signature) dataPrettyValue() interface{} {
+func (m Signature) dataPrettyValue() any {
 	r, _ := m.SignatureData()
 	return r
 }
