@@ -191,48 +191,65 @@ func (s *KeySignature) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// VersionSize returns the size in bytes of the value of field Version
-func (s *KeySignature) VersionTotalSize() uint64 {
-	return 1
-}
-
-// KeySize returns the size in bytes of the value of field Key
-func (s *KeySignature) KeyTotalSize() uint64 {
-	return s.Key.TotalSize()
-}
-
-// SignatureSize returns the size in bytes of the value of field Signature
-func (s *KeySignature) SignatureTotalSize() uint64 {
-	return s.Signature.TotalSize()
-}
-
-// VersionOffset returns the offset in bytes of field Version
-func (s *KeySignature) VersionOffset() uint64 {
-	return 0
-}
-
-// KeyOffset returns the offset in bytes of field Key
-func (s *KeySignature) KeyOffset() uint64 {
-	return s.VersionOffset() + s.VersionTotalSize()
-}
-
-// SignatureOffset returns the offset in bytes of field Signature
-func (s *KeySignature) SignatureOffset() uint64 {
-	return s.KeyOffset() + s.KeyTotalSize()
-}
-
-// Size returns the total size of the KeySignature.
-func (s *KeySignature) TotalSize() uint64 {
-	if s == nil {
-		return 0
+func (s *KeySignature) Layout() []LayoutField {
+	return []LayoutField{
+		{
+			Name: "Version",
+			Size: func() uint64 { return 1 },
+		},
+		{
+			Name: "Key",
+			Size: func() uint64 { return s.Key.Common.TotalSize(&s.Key) },
+		},
+		{
+			Name: "Signature",
+			Size: func() uint64 { return s.Signature.Common.TotalSize(&s.Signature) },
+		},
 	}
-
-	var size uint64
-	size += s.VersionTotalSize()
-	size += s.KeyTotalSize()
-	size += s.SignatureTotalSize()
-	return size
 }
+
+// // VersionSize returns the size in bytes of the value of field Version
+// func (s *KeySignature) VersionTotalSize() uint64 {
+// 	return 1
+// }
+//
+// // KeySize returns the size in bytes of the value of field Key
+// func (s *KeySignature) KeyTotalSize() uint64 {
+// 	return s.Key.TotalSize()
+// }
+//
+// // SignatureSize returns the size in bytes of the value of field Signature
+// func (s *KeySignature) SignatureTotalSize() uint64 {
+// 	return s.Signature.TotalSize()
+// }
+//
+// // VersionOffset returns the offset in bytes of field Version
+// func (s *KeySignature) VersionOffset() uint64 {
+// 	return 0
+// }
+//
+// // KeyOffset returns the offset in bytes of field Key
+// func (s *KeySignature) KeyOffset() uint64 {
+// 	return s.VersionOffset() + s.VersionTotalSize()
+// }
+//
+// // SignatureOffset returns the offset in bytes of field Signature
+// func (s *KeySignature) SignatureOffset() uint64 {
+// 	return s.KeyOffset() + s.KeyTotalSize()
+// }
+//
+// // Size returns the total size of the KeySignature.
+// func (s *KeySignature) TotalSize() uint64 {
+// 	if s == nil {
+// 		return 0
+// 	}
+//
+// 	var size uint64
+// 	size += s.VersionTotalSize()
+// 	size += s.KeyTotalSize()
+// 	size += s.SignatureTotalSize()
+// 	return size
+// }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *KeySignature) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

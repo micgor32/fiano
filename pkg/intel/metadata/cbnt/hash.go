@@ -26,7 +26,7 @@ func NewHashList() *HashList {
 func (s *HashList) Validate() error {
 	// See tag "rehashValue"
 	{
-		expectedValue := uint16(s.TotalSize())
+		expectedValue := uint16(s.Common.TotalSize(s))
 		if s.Size != expectedValue {
 			return fmt.Errorf("field 'Size' expects write-value '%v', but has %v", expectedValue, s.Size)
 		}
@@ -78,7 +78,7 @@ func (s *HashList) RehashRecursive() {
 // Rehash sets values which are calculated automatically depending on the rest
 // data. It is usually about the total size field of an element.
 func (s *HashList) Rehash() {
-	s.Size = uint16(s.TotalSize())
+	s.Size = uint16(s.Common.TotalSize(s))
 }
 
 // WriteTo writes the HashList into 'w' in format defined in
@@ -116,42 +116,61 @@ func (s *HashList) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// SizeSize returns the size in bytes of the value of field Size
-func (s *HashList) SizeTotalSize() uint64 {
-	return 2
-}
-
-// ListSize returns the size in bytes of the value of field List
-func (s *HashList) ListTotalSize() uint64 {
-	var size uint64
-	size += uint64(binary.Size(uint16(0)))
-	for idx := range s.List {
-		size += s.List[idx].TotalSize()
+func (s *HashList) Layout() []LayoutField {
+	return []LayoutField{
+		{
+			Name: "Size",
+			Size: func() uint64 { return 2 },
+		},
+		{
+			Name: "List",
+			Size: func() uint64 {
+				size := uint64(binary.Size(uint16(0)))
+				for idx := range s.List {
+					size += s.List[idx].Common.TotalSize(&s.List[idx])
+				}
+				return size
+			},
+		},
 	}
-	return size
 }
 
-// SizeOffset returns the offset in bytes of field Size
-func (s *HashList) SizeOffset() uint64 {
-	return 0
-}
-
-// ListOffset returns the offset in bytes of field List
-func (s *HashList) ListOffset() uint64 {
-	return s.SizeOffset() + s.SizeTotalSize()
-}
-
-// Size returns the total size of the HashList.
-func (s *HashList) TotalSize() uint64 {
-	if s == nil {
-		return 0
-	}
-
-	var size uint64
-	size += s.SizeTotalSize()
-	size += s.ListTotalSize()
-	return size
-}
+// // SizeSize returns the size in bytes of the value of field Size
+// func (s *HashList) SizeTotalSize() uint64 {
+// 	return 2
+// }
+//
+// // ListSize returns the size in bytes of the value of field List
+// func (s *HashList) ListTotalSize() uint64 {
+// 	var size uint64
+// 	size += uint64(binary.Size(uint16(0)))
+// 	for idx := range s.List {
+// 		size += s.List[idx].TotalSize()
+// 	}
+// 	return size
+// }
+//
+// // SizeOffset returns the offset in bytes of field Size
+// func (s *HashList) SizeOffset() uint64 {
+// 	return 0
+// }
+//
+// // ListOffset returns the offset in bytes of field List
+// func (s *HashList) ListOffset() uint64 {
+// 	return s.SizeOffset() + s.SizeTotalSize()
+// }
+//
+// // Size returns the total size of the HashList.
+// func (s *HashList) TotalSize() uint64 {
+// 	if s == nil {
+// 		return 0
+// 	}
+//
+// 	var size uint64
+// 	size += s.SizeTotalSize()
+// 	size += s.ListTotalSize()
+// 	return size
+// }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *HashList) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
@@ -270,39 +289,56 @@ func (s *HashStructure) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// HashAlgSize returns the size in bytes of the value of field HashAlg
-func (s *HashStructure) HashAlgTotalSize() uint64 {
-	return 2
-}
-
-// HashBufferSize returns the size in bytes of the value of field HashBuffer
-func (s *HashStructure) HashBufferTotalSize() uint64 {
-	size := uint64(binary.Size(uint16(0)))
-	size += uint64(len(s.HashBuffer))
-	return size
-}
-
-// HashAlgOffset returns the offset in bytes of field HashAlg
-func (s *HashStructure) HashAlgOffset() uint64 {
-	return 0
-}
-
-// HashBufferOffset returns the offset in bytes of field HashBuffer
-func (s *HashStructure) HashBufferOffset() uint64 {
-	return s.HashAlgOffset() + s.HashAlgTotalSize()
-}
-
-// Size returns the total size of the HashStructure.
-func (s *HashStructure) TotalSize() uint64 {
-	if s == nil {
-		return 0
+func (s *HashStructure) Layout() []LayoutField {
+	return []LayoutField{
+		{
+			Name: "HashAlg",
+			Size: func() uint64 { return 2 },
+		},
+		{
+			Name: "HashBuffer",
+			Size: func() uint64 {
+				size := uint64(binary.Size(uint16(0)))
+				size += uint64(len(s.HashBuffer))
+				return size
+			},
+		},
 	}
-
-	var size uint64
-	size += s.HashAlgTotalSize()
-	size += s.HashBufferTotalSize()
-	return size
 }
+
+// // HashAlgSize returns the size in bytes of the value of field HashAlg
+// func (s *HashStructure) HashAlgTotalSize() uint64 {
+// 	return 2
+// }
+//
+// // HashBufferSize returns the size in bytes of the value of field HashBuffer
+// func (s *HashStructure) HashBufferTotalSize() uint64 {
+// 	size := uint64(binary.Size(uint16(0)))
+// 	size += uint64(len(s.HashBuffer))
+// 	return size
+// }
+//
+// // HashAlgOffset returns the offset in bytes of field HashAlg
+// func (s *HashStructure) HashAlgOffset() uint64 {
+// 	return 0
+// }
+//
+// // HashBufferOffset returns the offset in bytes of field HashBuffer
+// func (s *HashStructure) HashBufferOffset() uint64 {
+// 	return s.HashAlgOffset() + s.HashAlgTotalSize()
+// }
+//
+// // Size returns the total size of the HashStructure.
+// func (s *HashStructure) TotalSize() uint64 {
+// 	if s == nil {
+// 		return 0
+// 	}
+//
+// 	var size uint64
+// 	size += s.HashAlgTotalSize()
+// 	size += s.HashBufferTotalSize()
+// 	return size
+// }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *HashStructure) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

@@ -126,59 +126,80 @@ func (s *StructInfo) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// IDSize returns the size in bytes of the value of field ID
-func (s *StructInfo) IDTotalSize() uint64 {
-	return 8
-}
-
-// VersionSize returns the size in bytes of the value of field Version
-func (s *StructInfo) VersionTotalSize() uint64 {
-	return 1
-}
-
-// Variable0Size returns the size in bytes of the value of field Variable0
-func (s *StructInfo) Variable0TotalSize() uint64 {
-	return 1
-}
-
-// ElementSizeSize returns the size in bytes of the value of field ElementSize
-func (s *StructInfo) ElementSizeTotalSize() uint64 {
-	return 2
-}
-
-// IDOffset returns the offset in bytes of field ID
-func (s *StructInfo) IDOffset() uint64 {
-	return 0
-}
-
-// VersionOffset returns the offset in bytes of field Version
-func (s *StructInfo) VersionOffset() uint64 {
-	return s.IDOffset() + s.IDTotalSize()
-}
-
-// Variable0Offset returns the offset in bytes of field Variable0
-func (s *StructInfo) Variable0Offset() uint64 {
-	return s.VersionOffset() + s.VersionTotalSize()
-}
-
-// ElementSizeOffset returns the offset in bytes of field ElementSize
-func (s *StructInfo) ElementSizeOffset() uint64 {
-	return s.Variable0Offset() + s.Variable0TotalSize()
-}
-
-// Size returns the total size of the StructInfo.
-func (s *StructInfo) TotalSize() uint64 {
-	if s == nil {
-		return 0
+func (s *StructInfo) Layout() []LayoutField {
+	return []LayoutField{
+		{
+			Name: "ID",
+			Size: func() uint64 { return 8 },
+		},
+		{
+			Name: "Version",
+			Size: func() uint64 { return 1 },
+		},
+		{
+			Name: "Variable0",
+			Size: func() uint64 { return 1 },
+		},
+		{
+			Name: "ElementSize",
+			Size: func() uint64 { return 2 },
+		},
 	}
-
-	var size uint64
-	size += s.IDTotalSize()
-	size += s.VersionTotalSize()
-	size += s.Variable0TotalSize()
-	size += s.ElementSizeTotalSize()
-	return size
 }
+
+// // IDSize returns the size in bytes of the value of field ID
+// func (s *StructInfo) IDTotalSize() uint64 {
+// 	return 8
+// }
+//
+// // VersionSize returns the size in bytes of the value of field Version
+// func (s *StructInfo) VersionTotalSize() uint64 {
+// 	return 1
+// }
+//
+// // Variable0Size returns the size in bytes of the value of field Variable0
+// func (s *StructInfo) Variable0TotalSize() uint64 {
+// 	return 1
+// }
+//
+// // ElementSizeSize returns the size in bytes of the value of field ElementSize
+// func (s *StructInfo) ElementSizeTotalSize() uint64 {
+// 	return 2
+// }
+//
+// // IDOffset returns the offset in bytes of field ID
+// func (s *StructInfo) IDOffset() uint64 {
+// 	return 0
+// }
+//
+// // VersionOffset returns the offset in bytes of field Version
+// func (s *StructInfo) VersionOffset() uint64 {
+// 	return s.IDOffset() + s.IDTotalSize()
+// }
+//
+// // Variable0Offset returns the offset in bytes of field Variable0
+// func (s *StructInfo) Variable0Offset() uint64 {
+// 	return s.VersionOffset() + s.VersionTotalSize()
+// }
+//
+// // ElementSizeOffset returns the offset in bytes of field ElementSize
+// func (s *StructInfo) ElementSizeOffset() uint64 {
+// 	return s.Variable0Offset() + s.Variable0TotalSize()
+// }
+//
+// // Size returns the total size of the StructInfo.
+// func (s *StructInfo) TotalSize() uint64 {
+// 	if s == nil {
+// 		return 0
+// 	}
+//
+// 	var size uint64
+// 	size += s.IDTotalSize()
+// 	size += s.VersionTotalSize()
+// 	size += s.Variable0TotalSize()
+// 	size += s.ElementSizeTotalSize()
+// 	return size
+// }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *StructInfo) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

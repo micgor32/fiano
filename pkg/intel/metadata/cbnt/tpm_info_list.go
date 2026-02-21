@@ -108,42 +108,61 @@ func (s *TPMInfoList) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// CapabilitiesSize returns the size in bytes of the value of field Capabilities
-func (s *TPMInfoList) CapabilitiesTotalSize() uint64 {
-	return 4
-}
-
-// AlgorithmsSize returns the size in bytes of the value of field Algorithms
-func (s *TPMInfoList) AlgorithmsTotalSize() uint64 {
-	var size uint64
-	size += uint64(binary.Size(uint16(0)))
-	for idx := range s.Algorithms {
-		size += s.Algorithms[idx].TotalSize()
+func (s *TPMInfoList) Layout() []LayoutField {
+	return []LayoutField{
+		{
+			Name: "Capabilities",
+			Size: func() uint64 { return 4 },
+		},
+		{
+			Name: "Algorithms",
+			Size: func() uint64 {
+				size := uint64(binary.Size(uint16(0)))
+				for idx := range s.Algorithms {
+					size += s.Algorithms[idx].TotalSize()
+				}
+				return size
+			},
+		},
 	}
-	return size
 }
 
-// CapabilitiesOffset returns the offset in bytes of field Capabilities
-func (s *TPMInfoList) CapabilitiesOffset() uint64 {
-	return 0
-}
-
-// AlgorithmsOffset returns the offset in bytes of field Algorithms
-func (s *TPMInfoList) AlgorithmsOffset() uint64 {
-	return s.CapabilitiesOffset() + s.CapabilitiesTotalSize()
-}
-
-// Size returns the total size of the TPMInfoList.
-func (s *TPMInfoList) TotalSize() uint64 {
-	if s == nil {
-		return 0
-	}
-
-	var size uint64
-	size += s.CapabilitiesTotalSize()
-	size += s.AlgorithmsTotalSize()
-	return size
-}
+// // CapabilitiesSize returns the size in bytes of the value of field Capabilities
+// func (s *TPMInfoList) CapabilitiesTotalSize() uint64 {
+// 	return 4
+// }
+//
+// // AlgorithmsSize returns the size in bytes of the value of field Algorithms
+// func (s *TPMInfoList) AlgorithmsTotalSize() uint64 {
+// 	var size uint64
+// 	size += uint64(binary.Size(uint16(0)))
+// 	for idx := range s.Algorithms {
+// 		size += s.Algorithms[idx].TotalSize()
+// 	}
+// 	return size
+// }
+//
+// // CapabilitiesOffset returns the offset in bytes of field Capabilities
+// func (s *TPMInfoList) CapabilitiesOffset() uint64 {
+// 	return 0
+// }
+//
+// // AlgorithmsOffset returns the offset in bytes of field Algorithms
+// func (s *TPMInfoList) AlgorithmsOffset() uint64 {
+// 	return s.CapabilitiesOffset() + s.CapabilitiesTotalSize()
+// }
+//
+// // Size returns the total size of the TPMInfoList.
+// func (s *TPMInfoList) TotalSize() uint64 {
+// 	if s == nil {
+// 		return 0
+// 	}
+//
+// 	var size uint64
+// 	size += s.CapabilitiesTotalSize()
+// 	size += s.AlgorithmsTotalSize()
+// 	return size
+// }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *TPMInfoList) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

@@ -28,6 +28,7 @@ type (
 	BitSize     uint16
 
 	StructInfo struct {
+		Common
 		ID          StructureID `json:"StructInfoID"`
 		Version     uint8       `json:"StructInfoVersion"`
 		Variable0   uint8       `json:"StructInfoVariable0"`
@@ -79,17 +80,20 @@ type (
 	}
 
 	HashStructure struct {
+		Common
 		HashAlg    Algorithm `default:"0x10" json:"hsAlg"`
 		HashBuffer []byte    `json:"hsBuffer"`
 	}
 
 	// HashList describes multiple digests
 	HashList struct {
+		Common
 		Size uint16          `rehashValue:"TotalSize()" json:"hlSize"`
 		List []HashStructure `json:"hlList"`
 	}
 
 	Signature struct {
+		Common
 		SigScheme Algorithm `json:"sigScheme"`
 		Version   uint8     `require:"0x10" json:"sigVersion,omitempty"`
 		KeySize   BitSize   `json:"sigKeysize,omitempty"`
@@ -98,6 +102,7 @@ type (
 	}
 
 	KeySignature struct {
+		Common
 		Version   uint8     `require:"0x10" json:"ksVersion,omitempty"`
 		Key       Key       `json:"ksKey"`
 		Signature Signature `json:"ksSignature"`
@@ -113,6 +118,7 @@ type (
 
 	// ChipsetACModuleInformation represents Chipset AC Module Information Table parts for all versions
 	ChipsetACModuleInformation struct {
+		Common
 		UUID            [16]byte
 		ChipsetACMType  uint8
 		Version         uint8
@@ -128,6 +134,7 @@ type (
 
 	// ChipsetACModuleInformationV5 represents Chipset AC Module Information Table for version >= 5
 	ChipsetACModuleInformationV5 struct {
+		Common
 		Base        ChipsetACModuleInformation
 		TPMInfoList uint32
 	}
@@ -143,6 +150,7 @@ type (
 
 	// TPMInfoList represents TPM capabilities supported by ACM
 	TPMInfoList struct {
+		Common
 		Capabilities TPMCapabilities
 		Algorithms   []Algorithm
 	}
