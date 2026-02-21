@@ -233,6 +233,27 @@ func NewKey() *Key {
 	return s
 }
 
+func (k *Key) Layout() []LayoutField {
+	return []LayoutField{
+		{
+			Name: "KeyAlg",
+			Size: func() uint64 { return 2 },
+		},
+		{
+			Name: "Version",
+			Size: func() uint64 { return 1 },
+		},
+		{
+			Name: "KeySize",
+			Size: func() uint64 { return 2 },
+		},
+		{
+			Name: "Data",
+			Size: func() uint64 { return uint64(len(k.Data)) },
+		},
+	}
+}
+
 // Validate (recursively) checks the structure if there are any unexpected
 // values. It returns an error if so.
 func (s *Key) Validate() error {
@@ -344,59 +365,59 @@ func (s *Key) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// KeyAlgSize returns the size in bytes of the value of field KeyAlg
-func (s *Key) KeyAlgTotalSize() uint64 {
-	return 2
-}
+// // KeyAlgSize returns the size in bytes of the value of field KeyAlg
+// func (s *Key) KeyAlgTotalSize() uint64 {
+// 	return 2
+// }
 
-// VersionSize returns the size in bytes of the value of field Version
-func (s *Key) VersionTotalSize() uint64 {
-	return 1
-}
+// // VersionSize returns the size in bytes of the value of field Version
+// func (s *Key) VersionTotalSize() uint64 {
+// 	return 1
+// }
 
-// KeySizeSize returns the size in bytes of the value of field KeySize
-func (s *Key) KeySizeTotalSize() uint64 {
-	return 2
-}
+// // KeySizeSize returns the size in bytes of the value of field KeySize
+// func (s *Key) KeySizeTotalSize() uint64 {
+// 	return 2
+// }
 
-// DataSize returns the size in bytes of the value of field Data
-func (s *Key) DataTotalSize() uint64 {
-	return uint64(len(s.Data))
-}
+// // DataSize returns the size in bytes of the value of field Data
+// func (s *Key) DataTotalSize() uint64 {
+// 	return uint64(len(s.Data))
+// }
 
-// KeyAlgOffset returns the offset in bytes of field KeyAlg
-func (s *Key) KeyAlgOffset() uint64 {
-	return 0
-}
+// // KeyAlgOffset returns the offset in bytes of field KeyAlg
+// func (s *Key) KeyAlgOffset() uint64 {
+// 	return 0
+// }
 
-// VersionOffset returns the offset in bytes of field Version
-func (s *Key) VersionOffset() uint64 {
-	return s.KeyAlgOffset() + s.KeyAlgTotalSize()
-}
+// // VersionOffset returns the offset in bytes of field Version
+// func (s *Key) VersionOffset() uint64 {
+// 	return s.KeyAlgOffset() + s.KeyAlgTotalSize()
+// }
 
-// KeySizeOffset returns the offset in bytes of field KeySize
-func (s *Key) KeySizeOffset() uint64 {
-	return s.VersionOffset() + s.VersionTotalSize()
-}
+// // KeySizeOffset returns the offset in bytes of field KeySize
+// func (s *Key) KeySizeOffset() uint64 {
+// 	return s.VersionOffset() + s.VersionTotalSize()
+// }
 
-// DataOffset returns the offset in bytes of field Data
-func (s *Key) DataOffset() uint64 {
-	return s.KeySizeOffset() + s.KeySizeTotalSize()
-}
+// // DataOffset returns the offset in bytes of field Data
+// func (s *Key) DataOffset() uint64 {
+// 	return s.KeySizeOffset() + s.KeySizeTotalSize()
+// }
 
-// Size returns the total size of the Key.
-func (s *Key) TotalSize() uint64 {
-	if s == nil {
-		return 0
-	}
+// // Size returns the total size of the Key.
+// func (s *Key) TotalSize() uint64 {
+// 	if s == nil {
+// 		return 0
+// 	}
 
-	var size uint64
-	size += s.KeyAlgTotalSize()
-	size += s.VersionTotalSize()
-	size += s.KeySizeTotalSize()
-	size += s.DataTotalSize()
-	return size
-}
+// 	var size uint64
+// 	size += s.KeyAlgTotalSize()
+// 	size += s.VersionTotalSize()
+// 	size += s.KeySizeTotalSize()
+// 	size += s.DataTotalSize()
+// 	return size
+// }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *Key) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

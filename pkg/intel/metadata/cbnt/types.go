@@ -34,6 +34,22 @@ type (
 		ElementSize uint16      `json:"StructInfoElementSize"`
 	}
 
+	LayoutField struct {
+		Name string
+		Size func() uint64
+	}
+
+	LayoutProvider interface {
+		Layout() []LayoutField
+	}
+
+	// Stateless engine, we use as "accessor" to offset and size
+	// values per structure instead of dedicated methods.
+	// TODO: mention in docs how to work with it since all the
+	// <type>TotalSize etc. is gone now. It wasn't used that much
+	// externally but anyways :D
+	Common struct{}
+
 	// Structure is an abstraction of a structure of a manifest.
 	Structure interface {
 		io.ReaderFrom
@@ -88,6 +104,7 @@ type (
 	}
 
 	Key struct {
+		Common
 		KeyAlg  Algorithm `json:"keyAlg"`
 		Version uint8     `require:"0x10"  json:"keyVersion"`
 		KeySize BitSize   `json:"keyBitsize"`
