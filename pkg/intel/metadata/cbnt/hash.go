@@ -192,13 +192,6 @@ func NewHashStructure(alg Algorithm) *HashStructure {
 	return s
 }
 
-// Validate (recursively) checks the structure if there are any unexpected
-// values. It returns an error if so.
-func (s *HashStructure) Validate() error {
-
-	return nil
-}
-
 // ReadFrom reads the HashStructure from 'r' in format defined in the document #575623.
 func (s *HashStructure) ReadFrom(r io.Reader) (int64, error) {
 	totalN := int64(0)

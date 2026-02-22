@@ -20,13 +20,6 @@ func NewStructInfo() *StructInfo {
 	return s
 }
 
-// Validate (recursively) checks the structure if there are any unexpected
-// values. It returns an error if so.
-func (s *StructInfo) Validate() error {
-
-	return nil
-}
-
 // ReadFrom reads the StructInfo from 'r' in format defined in the document #575623.
 func (s *StructInfo) ReadFrom(r io.Reader) (int64, error) {
 	totalN := int64(0)
