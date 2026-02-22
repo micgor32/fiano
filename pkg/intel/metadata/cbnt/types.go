@@ -35,10 +35,16 @@ type (
 		ElementSize uint16      `json:"StructInfoElementSize"`
 	}
 
+	ManifestFieldType string
+
 	LayoutField struct {
 		Name  string
 		Size  func() uint64
 		Value func() any
+		Type  ManifestFieldType
+		// optional list reader onluy to be used for types that contain
+		// ManifestFieldList
+		ReadList func(r io.Reader) (int64, error)
 	}
 
 	LayoutProvider interface {

@@ -274,17 +274,19 @@ func (s *SE) Validate() error {
 		}
 	}
 	// Recursively validating a child structure:
-	if err := s.PostIBBHash.Validate(); err != nil {
-		return fmt.Errorf("error on field 'PostIBBHash': %w", err)
-	}
+	// TODO: remove later
+	// if err := s.PostIBBHash.Validate(); err != nil {
+	// 	return fmt.Errorf("error on field 'PostIBBHash': %w", err)
+	// }
 	// Recursively validating a child structure:
 	if err := s.DigestList.Validate(); err != nil {
 		return fmt.Errorf("error on field 'DigestList': %w", err)
 	}
 	// Recursively validating a child structure:
-	if err := s.OBBHash.Validate(); err != nil {
-		return fmt.Errorf("error on field 'OBBHash': %w", err)
-	}
+	// TODO: remove later
+	// if err := s.OBBHash.Validate(); err != nil {
+	// 	return fmt.Errorf("error on field 'OBBHash': %w", err)
+	// }
 	// See tag "require"
 	for idx := range s.Reserved2 {
 		if s.Reserved2[idx] != 0 {
@@ -707,7 +709,7 @@ func (s *SE) WriteTo(w io.Writer) (int64, error) {
 
 // StructInfoSize returns the size in bytes of the value of field StructInfo
 func (s *SE) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
+	return s.StructInfo.TotalSize(s)
 }
 
 // Reserved0Size returns the size in bytes of the value of field Reserved0
@@ -767,7 +769,7 @@ func (s *SE) DMAProtLimit1TotalSize() uint64 {
 
 // PostIBBHashSize returns the size in bytes of the value of field PostIBBHash
 func (s *SE) PostIBBHashTotalSize() uint64 {
-	return s.PostIBBHash.TotalSize()
+	return s.PostIBBHash.TotalSize(s)
 }
 
 // IBBEntryPointSize returns the size in bytes of the value of field IBBEntryPoint
@@ -777,12 +779,12 @@ func (s *SE) IBBEntryPointTotalSize() uint64 {
 
 // DigestListSize returns the size in bytes of the value of field DigestList
 func (s *SE) DigestListTotalSize() uint64 {
-	return s.DigestList.TotalSize()
+	return s.DigestList.TotalSize(s)
 }
 
 // OBBHashSize returns the size in bytes of the value of field OBBHash
 func (s *SE) OBBHashTotalSize() uint64 {
-	return s.OBBHash.TotalSize()
+	return s.OBBHash.TotalSize(s)
 }
 
 // Reserved2Size returns the size in bytes of the value of field Reserved2

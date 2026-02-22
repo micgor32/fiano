@@ -63,6 +63,13 @@ const (
 	TPM2PCRExtendMaximumAgilityPolicy     TPM2PCRExtendPolicySupport = 1
 	TPM2PCRExtendMaximumPerformancePolicy TPM2PCRExtendPolicySupport = 2
 	TPM2PCRExtendBothPolicies             TPM2PCRExtendPolicySupport = 3
+
+	ManifestFieldEndValue               ManifestFieldType = "endValue"
+	ManifestFieldArrayStatic            ManifestFieldType = "arrayStatic"
+	ManifestFieldArrayDynamicWithSize   ManifestFieldType = "arrayDynamicWithSize"
+	ManifestFieldArrayDynamicWithPrefix ManifestFieldType = "arrayDynamicWithPrefix"
+	ManifestFieldList                   ManifestFieldType = "list"
+	ManifestFieldSubStruct              ManifestFieldType = "subStruct"
 )
 
 // Yes, I know a file called "consts" is not a best place for a variable definition,

@@ -35,7 +35,7 @@ var (
 func NewHash() *Hash {
 	s := &Hash{}
 	// Recursively initializing a child structure:
-	s.Digest = *cbnt.NewHashStructure()
+	//s.Digest = *cbnt.NewHashStructure()
 	s.Rehash()
 	return s
 }
@@ -44,9 +44,9 @@ func NewHash() *Hash {
 // values. It returns an error if so.
 func (s *Hash) Validate() error {
 	// Recursively validating a child structure:
-	if err := s.Digest.Validate(); err != nil {
-		return fmt.Errorf("error on field 'Digest': %w", err)
-	}
+	// if err := s.Digest.Validate(); err != nil {
+	// 	return fmt.Errorf("error on field 'Digest': %w", err)
+	// }
 
 	return nil
 }
@@ -121,7 +121,8 @@ func (s *Hash) UsageTotalSize() uint64 {
 
 // DigestSize returns the size in bytes of the value of field Digest
 func (s *Hash) DigestTotalSize() uint64 {
-	return s.Digest.TotalSize()
+	//return s.Digest.TotalSize(s)
+	return 0
 }
 
 // UsageOffset returns the offset in bytes of field Usage

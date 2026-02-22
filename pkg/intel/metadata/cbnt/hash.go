@@ -36,34 +36,9 @@ func (s *HashList) Validate() error {
 
 // ReadFrom reads the HashList from 'r' in format defined in the document #575623.
 func (s *HashList) ReadFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// Size (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.Size)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Size': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// List (ManifestFieldType: list)
-	{
-		var count uint16
-		err := binary.Read(r, binary.LittleEndian, &count)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read the count for field 'List': %w", err)
-		}
-		totalN += int64(binary.Size(count))
-		s.List = make([]HashStructure, count)
-
-		for idx := range s.List {
-			n, err := s.List[idx].ReadFrom(r)
-			if err != nil {
-				return totalN, fmt.Errorf("unable to read field 'List[%d]': %w", idx, err)
-			}
-			totalN += int64(n)
-		}
+	totalN, err := s.Common.ReadFrom(r, s)
+	if err != nil {
+		return 0, err
 	}
 
 	return totalN, nil
@@ -121,6 +96,7 @@ func (s *HashList) Layout() []LayoutField {
 			Name:  "Size",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.Size },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name: fmt.Sprintf("List: Array of \"Hash List\" of length %d", len(s.List)),
@@ -132,6 +108,27 @@ func (s *HashList) Layout() []LayoutField {
 				return size
 			},
 			Value: func() any { return &s.List },
+			Type:  ManifestFieldList,
+			// this is basically the logic from ReadFrom of HashList
+			// for the ManifestFieldType list. Just that now we pass it
+			// as closure and let generic ReadFrom make use of it.
+			ReadList: func(r io.Reader) (int64, error) {
+				var count uint16
+				if err := binary.Read(r, endianess, &count); err != nil {
+					return 0, fmt.Errorf("unable to read the count for field 'List': %w", err)
+				}
+				totalN := int64(binary.Size(count))
+
+				s.List = make([]HashStructure, count)
+				for idx := range s.List {
+					n, err := s.List[idx].ReadFrom(r)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to read field 'List[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+				return totalN, nil
+			},
 		},
 	}
 }
@@ -194,31 +191,9 @@ func NewHashStructure(alg Algorithm) *HashStructure {
 
 // ReadFrom reads the HashStructure from 'r' in format defined in the document #575623.
 func (s *HashStructure) ReadFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// HashAlg (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.HashAlg)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'HashAlg': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// HashBuffer (ManifestFieldType: arrayDynamic)
-	{
-		var size uint16
-		err := binary.Read(r, binary.LittleEndian, &size)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to the read size of field 'HashBuffer': %w", err)
-		}
-		totalN += int64(binary.Size(size))
-		s.HashBuffer = make([]byte, size)
-		n, err := len(s.HashBuffer), binary.Read(r, binary.LittleEndian, s.HashBuffer)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'HashBuffer': %w", err)
-		}
-		totalN += int64(n)
+	totalN, err := s.Common.ReadFrom(r, s)
+	if err != nil {
+		return 0, err
 	}
 
 	return totalN, nil
@@ -273,15 +248,19 @@ func (s *HashStructure) Layout() []LayoutField {
 			Name:  "Hash Alg",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.HashAlg },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name: "Hash Buffer",
 			Size: func() uint64 {
-				size := uint64(binary.Size(uint16(0)))
-				size += uint64(len(s.HashBuffer))
-				return size
+				h, err := s.HashAlg.Hash()
+				if err != nil {
+					return uint64(binary.Size(uint16(0)))
+				}
+				return uint64(binary.Size(uint16(0))) + uint64(h.Size())
 			},
 			Value: func() any { return &s.HashBuffer },
+			Type:  ManifestFieldArrayDynamicWithPrefix,
 		},
 	}
 }

@@ -431,7 +431,7 @@ func (s *TXT) WriteTo(w io.Writer) (int64, error) {
 
 // StructInfoSize returns the size in bytes of the value of field StructInfo
 func (s *TXT) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
+	return s.StructInfo.TotalSize(s)
 }
 
 // Reserved0Size returns the size in bytes of the value of field Reserved0
@@ -491,7 +491,7 @@ func (s *TXT) PwrMBaseOffsetTotalSize() uint64 {
 
 // DigestListSize returns the size in bytes of the value of field DigestList
 func (s *TXT) DigestListTotalSize() uint64 {
-	return s.DigestList.TotalSize()
+	return s.DigestList.TotalSize(s)
 }
 
 // Reserved3Size returns the size in bytes of the value of field Reserved3

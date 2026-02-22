@@ -22,42 +22,9 @@ func NewStructInfo() *StructInfo {
 
 // ReadFrom reads the StructInfo from 'r' in format defined in the document #575623.
 func (s *StructInfo) ReadFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// ID (ManifestFieldType: arrayStatic)
-	{
-		n, err := 8, binary.Read(r, binary.LittleEndian, s.ID[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'ID': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Variable0 (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.Variable0)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Variable0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ElementSize (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.ElementSize)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'ElementSize': %w", err)
-		}
-		totalN += int64(n)
+	totalN, err := s.Common.ReadFrom(r, s)
+	if err != nil {
+		return 0, err
 	}
 
 	return totalN, nil
@@ -124,21 +91,25 @@ func (s *StructInfo) Layout() []LayoutField {
 			Name:  "ID",
 			Size:  func() uint64 { return 8 },
 			Value: func() any { return &s.ID },
+			Type:  ManifestFieldArrayStatic,
 		},
 		{
 			Name:  "Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.Version },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Variable 0",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.Variable0 },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Element Size",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.ElementSize },
+			Type:  ManifestFieldEndValue,
 		},
 	}
 }

@@ -40,53 +40,9 @@ func (s *Signature) Validate() error {
 
 // ReadFrom reads the Signature from 'r' in format defined in the document #575623.
 func (s *Signature) ReadFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// SigScheme (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.SigScheme)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'SigScheme': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KeySize (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.KeySize)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KeySize': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// HashAlg (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.HashAlg)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'HashAlg': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Data (ManifestFieldType: arrayDynamic)
-	{
-		size := uint16(s.KeySize.InBytes())
-		s.Data = make([]byte, size)
-		n, err := len(s.Data), binary.Read(r, binary.LittleEndian, s.Data)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Data': %w", err)
-		}
-		totalN += int64(n)
+	totalN, err := s.Common.ReadFrom(r, s)
+	if err != nil {
+		return 0, err
 	}
 
 	return totalN, nil
@@ -162,26 +118,31 @@ func (s *Signature) Layout() []LayoutField {
 			Name:  "Sig Scheme",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.SigScheme },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.Version },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Key Size",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.KeySize },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Hash Alg",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.HashAlg },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Data",
-			Size:  func() uint64 { return uint64(len(s.Data)) },
-			Value: func() any { return s.dataPrettyValue() },
+			Size:  func() uint64 { return uint64(s.KeySize.InBytes()) },
+			Value: func() any { return &s.Data },
+			Type:  ManifestFieldArrayDynamicWithSize,
 		},
 	}
 }

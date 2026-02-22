@@ -14,7 +14,6 @@ package cbntbootpolicy
 
 import (
 	"fmt"
-
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
@@ -48,7 +47,7 @@ func (bpm Manifest) Print() {
 		fmt.Println("  --PME--\n\tnot set!(optional)")
 	}
 
-	if bpm.PMSE.Signature.DataTotalSize() < 1 {
+	if len(bpm.PMSE.Signature.Data) < 1 {
 		fmt.Printf("%v\n", bpm.PMSE.PrettyString(1, true, pretty.OptionOmitKeySignature(true)))
 		fmt.Printf("  --PMSE--\n\tBoot Policy Manifest not signed!\n\n")
 	} else {

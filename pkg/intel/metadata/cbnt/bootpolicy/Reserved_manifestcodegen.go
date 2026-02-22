@@ -150,7 +150,7 @@ func (s *Reserved) WriteTo(w io.Writer) (int64, error) {
 
 // StructInfoSize returns the size in bytes of the value of field StructInfo
 func (s *Reserved) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
+	return s.StructInfo.TotalSize(s)
 }
 
 // ReservedDataSize returns the size in bytes of the value of field ReservedData

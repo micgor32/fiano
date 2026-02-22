@@ -193,7 +193,7 @@ func (s *PCD) WriteTo(w io.Writer) (int64, error) {
 
 // StructInfoSize returns the size in bytes of the value of field StructInfo
 func (s *PCD) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
+	return s.StructInfo.TotalSize(s)
 }
 
 // Reserved0Size returns the size in bytes of the value of field Reserved0

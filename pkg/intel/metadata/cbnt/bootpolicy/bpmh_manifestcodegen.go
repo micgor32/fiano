@@ -246,7 +246,7 @@ func (s *BPMH) WriteTo(w io.Writer) (int64, error) {
 
 // StructInfoSize returns the size in bytes of the value of field StructInfo
 func (s *BPMH) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
+	return s.StructInfo.TotalSize(s)
 }
 
 // KeySignatureOffsetSize returns the size in bytes of the value of field KeySignatureOffset

@@ -239,21 +239,25 @@ func (k *Key) Layout() []LayoutField {
 			Name:  "Key Alg",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &k.KeyAlg },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &k.Version },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Key Size",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &k.KeySize },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Data",
-			Size:  func() uint64 { return uint64(len(k.Data)) },
+			Size:  func() uint64 { return uint64(k.keyDataSize()) },
 			Value: func() any { return &k.Data },
+			Type:  ManifestFieldArrayDynamicWithSize,
 		},
 	}
 }
@@ -271,44 +275,9 @@ func (s *Key) Validate() error {
 
 // ReadFrom reads the Key from 'r' in format defined in the document #575623.
 func (s *Key) ReadFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// KeyAlg (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.KeyAlg)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KeyAlg': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KeySize (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.KeySize)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KeySize': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Data (ManifestFieldType: arrayDynamic)
-	{
-		size := uint16(s.keyDataSize())
-		s.Data = make([]byte, size)
-		n, err := len(s.Data), binary.Read(r, binary.LittleEndian, s.Data)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Data': %w", err)
-		}
-		totalN += int64(n)
+	totalN, err := s.Common.ReadFrom(r, s)
+	if err != nil {
+		return 0, err
 	}
 
 	return totalN, nil

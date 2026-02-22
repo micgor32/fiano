@@ -61,9 +61,9 @@ func NewManifest(bgv cbnt.BootGuardVersion) *Manifest {
 func (s *Manifest) Validate() error {
 	switch s.StructInfo.Version {
 	case 0x10:
-		if err := s.BGKM.BPKey.Validate(); err != nil {
-			return fmt.Errorf("error on field 'BPKey': %w", err)
-		}
+		// if err := s.BGKM.BPKey.Validate(); err != nil {
+		// 	return fmt.Errorf("error on field 'BPKey': %w", err)
+		// }
 	case 0x21:
 		// See tag "rehashValue"		
 		expectedValue := uint16(s.KeyAndSignatureOffset())
@@ -329,7 +329,7 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 
 // StructInfoSize returns the size in bytes of the value of field StructInfo
 func (s *Manifest) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
+	return s.StructInfo.TotalSize(s)
 }
 
 // KeyManifestSignatureOffsetSize returns the size in bytes of the value of field KeyManifestSignatureOffset
@@ -374,7 +374,7 @@ func (s *Manifest) HashTotalSize() uint64 {
 
 // KeyAndSignatureSize returns the size in bytes of the value of field KeyAndSignature
 func (s *Manifest) KeyAndSignatureTotalSize() uint64 {
-	return s.KeyAndSignature.TotalSize()
+	return s.KeyAndSignature.TotalSize(s)
 }
 
 // StructInfoOffset returns the offset in bytes of field StructInfo

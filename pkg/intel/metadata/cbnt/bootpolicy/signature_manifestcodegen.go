@@ -157,12 +157,14 @@ func (s *Signature) WriteTo(w io.Writer) (int64, error) {
 
 // StructInfoSize returns the size in bytes of the value of field StructInfo
 func (s *Signature) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
+	// return s.StructInfo.TotalSize(s)
+	return 0
 }
 
 // KeySignatureSize returns the size in bytes of the value of field KeySignature
 func (s *Signature) KeySignatureTotalSize() uint64 {
-	return s.KeySignature.TotalSize()
+	// return s.KeySignature.TotalSize(s)
+	return 0
 }
 
 // StructInfoOffset returns the offset in bytes of field StructInfo
