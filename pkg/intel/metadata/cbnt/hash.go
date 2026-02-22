@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
@@ -119,11 +118,12 @@ func (s *HashList) WriteTo(w io.Writer) (int64, error) {
 func (s *HashList) Layout() []LayoutField {
 	return []LayoutField{
 		{
-			Name: "Size",
-			Size: func() uint64 { return 2 },
+			Name:  "Size",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.Size },
 		},
 		{
-			Name: "List",
+			Name: fmt.Sprintf("List: Array of \"Hash List\" of length %d", len(s.List)),
 			Size: func() uint64 {
 				size := uint64(binary.Size(uint16(0)))
 				for idx := range s.List {
@@ -131,6 +131,7 @@ func (s *HashList) Layout() []LayoutField {
 				}
 				return size
 			},
+			Value: func() any { return &s.List },
 		},
 	}
 }
@@ -174,27 +175,11 @@ func (s *HashList) Layout() []LayoutField {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *HashList) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "Hash List", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Size", "", &s.Size, opts...)...)
-	// ManifestFieldType is list
-	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("List: Array of \"Hash List\" of length %d", len(s.List)), s.List))
-	for i := 0; i < len(s.List); i++ {
-		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.List[i].PrettyString(depth+2, true)))
-	}
+	result := Common{}.PrettyString(depth, withHeader, s, "Hash List", opts...)
 	if depth < 1 {
-		lines = append(lines, "")
+		return result + "\n"
 	}
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return result
 }
 
 // NewHashStructure returns a new instance of HashStructure with
@@ -292,16 +277,18 @@ func (s *HashStructure) WriteTo(w io.Writer) (int64, error) {
 func (s *HashStructure) Layout() []LayoutField {
 	return []LayoutField{
 		{
-			Name: "HashAlg",
-			Size: func() uint64 { return 2 },
+			Name:  "Hash Alg",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.HashAlg },
 		},
 		{
-			Name: "HashBuffer",
+			Name: "Hash Buffer",
 			Size: func() uint64 {
 				size := uint64(binary.Size(uint16(0)))
 				size += uint64(len(s.HashBuffer))
 				return size
 			},
+			Value: func() any { return &s.HashBuffer },
 		},
 	}
 }
@@ -342,19 +329,5 @@ func (s *HashStructure) Layout() []LayoutField {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *HashStructure) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "Hash Structure", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Hash Alg", "", &s.HashAlg, opts...)...)
-	// ManifestFieldType is arrayDynamic
-	lines = append(lines, pretty.SubValue(depth+1, "Hash Buffer", "", &s.HashBuffer, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return Common{}.PrettyString(depth, withHeader, s, "Hash Structure", opts...)
 }

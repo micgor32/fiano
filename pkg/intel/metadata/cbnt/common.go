@@ -4,6 +4,12 @@
 
 package cbnt
 
+import (
+	"strings"
+
+	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
+)
+
 func (Common) TotalSize(p LayoutProvider) uint64 {
 	var total uint64
 	for _, f := range p.Layout() {
@@ -23,4 +29,24 @@ func (Common) OffsetOf(p LayoutProvider, fieldName string) uint64 {
 	}
 
 	return 0
+}
+
+func (Common) PrettyString(depth uint, withHeader bool, p LayoutProvider, structName string, opts ...pretty.Option) string {
+	var lines []string
+
+	if withHeader {
+		// FIXME: Passing p here is wrong, let's modify Header to ommit
+		// taking obj as an argument, since it is useless if we pass name
+		// (which is always the case)
+		lines = append(lines, pretty.Header(depth, structName, p))
+	}
+
+	for _, f := range p.Layout() {
+		lines = append(lines, pretty.SubValue(depth+1, f.Name, "", f.Value, opts...)...)
+	}
+
+	if depth < 2 {
+		lines = append(lines, "")
+	}
+	return strings.Join(lines, "\n")
 }

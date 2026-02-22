@@ -36,8 +36,9 @@ type (
 	}
 
 	LayoutField struct {
-		Name string
-		Size func() uint64
+		Name  string
+		Size  func() uint64
+		Value func() any
 	}
 
 	LayoutProvider interface {

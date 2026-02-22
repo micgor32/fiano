@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
@@ -129,20 +128,24 @@ func (s *StructInfo) WriteTo(w io.Writer) (int64, error) {
 func (s *StructInfo) Layout() []LayoutField {
 	return []LayoutField{
 		{
-			Name: "ID",
-			Size: func() uint64 { return 8 },
+			Name:  "ID",
+			Size:  func() uint64 { return 8 },
+			Value: func() any { return &s.ID },
 		},
 		{
-			Name: "Version",
-			Size: func() uint64 { return 1 },
+			Name:  "Version",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.Version },
 		},
 		{
-			Name: "Variable0",
-			Size: func() uint64 { return 1 },
+			Name:  "Variable 0",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.Variable0 },
 		},
 		{
-			Name: "ElementSize",
-			Size: func() uint64 { return 2 },
+			Name:  "Element Size",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.ElementSize },
 		},
 	}
 }
@@ -203,25 +206,7 @@ func (s *StructInfo) Layout() []LayoutField {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *StructInfo) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "Struct Info", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "ID", "", &s.ID, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Version", "", &s.Version, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Variable 0", "", &s.Variable0, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Element Size", "", &s.ElementSize, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return Common{}.PrettyString(depth, withHeader, s, "Struct Info", opts...)
 }
 
 // StructInfo just returns StructInfo, it is a handy method if StructInfo

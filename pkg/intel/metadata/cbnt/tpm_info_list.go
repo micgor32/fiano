@@ -111,11 +111,12 @@ func (s *TPMInfoList) WriteTo(w io.Writer) (int64, error) {
 func (s *TPMInfoList) Layout() []LayoutField {
 	return []LayoutField{
 		{
-			Name: "Capabilities",
-			Size: func() uint64 { return 4 },
+			Name:  "Capabilities",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.Capabilities },
 		},
 		{
-			Name: "Algorithms",
+			Name: fmt.Sprintf("Algorithms: Array of \"TPM Info List\" of length %d", len(s.Algorithms)),
 			Size: func() uint64 {
 				size := uint64(binary.Size(uint16(0)))
 				for idx := range s.Algorithms {
@@ -123,6 +124,7 @@ func (s *TPMInfoList) Layout() []LayoutField {
 				}
 				return size
 			},
+			Value: func() any { return &s.Algorithms },
 		},
 	}
 }
@@ -166,27 +168,11 @@ func (s *TPMInfoList) Layout() []LayoutField {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *TPMInfoList) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "TPM Info List", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Capabilities", "", &s.Capabilities, opts...)...)
-	// ManifestFieldType is list
-	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("Algorithms: Array of \"TPM Info List\" of length %d", len(s.Algorithms)), s.Algorithms))
-	for i := 0; i < len(s.Algorithms); i++ {
-		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.Algorithms[i].PrettyString(depth+2, true)))
-	}
+	result := Common{}.PrettyString(depth, withHeader, s, "TPM Info List", opts...)
 	if depth < 1 {
-		lines = append(lines, "")
+		return result + "\n"
 	}
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return result
 }
 
 // PrettyString returns the bits of the flags in an easy-to-read format.

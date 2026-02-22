@@ -13,7 +13,6 @@ import (
 
 	"encoding/binary"
 	"io"
-	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
@@ -160,24 +159,29 @@ func (s *Signature) WriteTo(w io.Writer) (int64, error) {
 func (s *Signature) Layout() []LayoutField {
 	return []LayoutField{
 		{
-			Name: "SigScheme",
-			Size: func() uint64 { return 2 },
+			Name:  "Sig Scheme",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.SigScheme },
 		},
 		{
-			Name: "Version",
-			Size: func() uint64 { return 1 },
+			Name:  "Version",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.Version },
 		},
 		{
-			Name: "KeySize",
-			Size: func() uint64 { return 2 },
+			Name:  "Key Size",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.KeySize },
 		},
 		{
-			Name: "HashAlg",
-			Size: func() uint64 { return 2 },
+			Name:  "Hash Alg",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.HashAlg },
 		},
 		{
-			Name: "Data",
-			Size: func() uint64 { return uint64(len(s.Data)) },
+			Name:  "Data",
+			Size:  func() uint64 { return uint64(len(s.Data)) },
+			Value: func() any { return s.dataPrettyValue() },
 		},
 	}
 }
@@ -249,27 +253,7 @@ func (s *Signature) Layout() []LayoutField {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *Signature) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "Signature", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Sig Scheme", "", &s.SigScheme, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Version", "", &s.Version, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Key Size", "", &s.KeySize, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Hash Alg", "", &s.HashAlg, opts...)...)
-	// ManifestFieldType is arrayDynamic
-	lines = append(lines, pretty.SubValue(depth+1, "Data", "", s.dataPrettyValue(), opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return Common{}.PrettyString(depth, withHeader, s, "Signature", opts...)
 }
 
 func (m Signature) dataPrettyValue() any {

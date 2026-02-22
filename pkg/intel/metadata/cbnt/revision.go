@@ -37,6 +37,8 @@ func DetectBGV(r io.ReadSeeker) (BootGuardVersion, error) {
 		return 0, err
 	}
 
+	fmt.Printf("raw version 0x%x\n", s.Version)
+
 	switch s.Version {
 	case 0x10:
 		return Version10, nil
@@ -51,6 +53,6 @@ func DetectBGV(r io.ReadSeeker) (BootGuardVersion, error) {
 	case 0x25:
 		return Version21, nil
 	default:
-		return 0, fmt.Errorf("couldn't detect version")
+		return 0, fmt.Errorf("couldn't detect version 0x%x", s.Version)
 	}
 }

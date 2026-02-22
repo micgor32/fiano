@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
@@ -194,16 +193,19 @@ func (s *KeySignature) WriteTo(w io.Writer) (int64, error) {
 func (s *KeySignature) Layout() []LayoutField {
 	return []LayoutField{
 		{
-			Name: "Version",
-			Size: func() uint64 { return 1 },
+			Name:  "Version",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.Version },
 		},
 		{
-			Name: "Key",
-			Size: func() uint64 { return s.Key.Common.TotalSize(&s.Key) },
+			Name:  "Key",
+			Size:  func() uint64 { return s.Key.Common.TotalSize(&s.Key) },
+			Value: func() any { return &s.Key },
 		},
 		{
-			Name: "Signature",
-			Size: func() uint64 { return s.Signature.Common.TotalSize(&s.Signature) },
+			Name:  "Signature",
+			Size:  func() uint64 { return s.Signature.Common.TotalSize(&s.Signature) },
+			Value: func() any { return &s.Signature },
 		},
 	}
 }
@@ -253,21 +255,5 @@ func (s *KeySignature) Layout() []LayoutField {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *KeySignature) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "Key Signature", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Version", "", &s.Version, opts...)...)
-	// ManifestFieldType is subStruct
-	lines = append(lines, pretty.SubValue(depth+1, "Key", "", &s.Key, opts...)...)
-	// ManifestFieldType is subStruct
-	lines = append(lines, pretty.SubValue(depth+1, "Signature", "", &s.Signature, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return Common{}.PrettyString(depth, withHeader, s, "Key Signature", opts...)
 }

@@ -236,20 +236,24 @@ func NewKey() *Key {
 func (k *Key) Layout() []LayoutField {
 	return []LayoutField{
 		{
-			Name: "KeyAlg",
-			Size: func() uint64 { return 2 },
+			Name:  "Key Alg",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &k.KeyAlg },
 		},
 		{
-			Name: "Version",
-			Size: func() uint64 { return 1 },
+			Name:  "Version",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &k.Version },
 		},
 		{
-			Name: "KeySize",
-			Size: func() uint64 { return 2 },
+			Name:  "Key Size",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &k.KeySize },
 		},
 		{
-			Name: "Data",
-			Size: func() uint64 { return uint64(len(k.Data)) },
+			Name:  "Data",
+			Size:  func() uint64 { return uint64(len(k.Data)) },
+			Value: func() any { return &k.Data },
 		},
 	}
 }
@@ -421,25 +425,7 @@ func (s *Key) WriteTo(w io.Writer) (int64, error) {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *Key) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "Key", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Key Alg", "", &s.KeyAlg, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Version", "", &s.Version, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Key Size", "", &s.KeySize, opts...)...)
-	// ManifestFieldType is arrayDynamic
-	lines = append(lines, pretty.SubValue(depth+1, "Data", "", &s.Data, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return Common{}.PrettyString(depth, withHeader, s, "Key", opts...)
 }
 
 // PrettyString returns the bits of the flags in an easy-to-read format.

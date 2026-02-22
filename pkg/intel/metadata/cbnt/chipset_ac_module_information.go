@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
@@ -282,48 +281,59 @@ func (s *ChipsetACModuleInformation) WriteTo(w io.Writer) (int64, error) {
 func (s *ChipsetACModuleInformation) Layout() []LayoutField {
 	return []LayoutField{
 		{
-			Name: "UUID",
-			Size: func() uint64 { return 16 },
+			Name:  "UUID",
+			Size:  func() uint64 { return 16 },
+			Value: func() any { return &s.UUID },
 		},
 		{
-			Name: "ChipsetACMType",
-			Size: func() uint64 { return 1 },
+			Name:  "Chipset ACM Type",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.ChipsetACMType },
 		},
 		{
-			Name: "Version",
-			Size: func() uint64 { return 1 },
+			Name:  "Version",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.Version },
 		},
 		{
-			Name: "Length",
-			Size: func() uint64 { return 2 },
+			Name:  "Length",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.Length },
 		},
 		{
-			Name: "ChipsetIDList",
-			Size: func() uint64 { return 4 },
+			Name:  "Chipset ID List",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.ChipsetIDList },
 		},
 		{
-			Name: "OsSinitDataVer",
-			Size: func() uint64 { return 4 },
+			Name:  "Os Sinit Data Ver",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.OsSinitDataVer },
 		},
 		{
-			Name: "MinMleHeaderVer",
-			Size: func() uint64 { return 4 },
+			Name:  "Min Mle Header Ver",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.MinMleHeaderVer },
 		},
 		{
-			Name: "Capabilities",
-			Size: func() uint64 { return 4 },
+			Name:  "Capabilities",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.Capabilities },
 		},
 		{
-			Name: "AcmVersion",
-			Size: func() uint64 { return 1 },
+			Name:  "Acm Version",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.AcmVersion },
 		},
 		{
-			Name: "AcmRevision",
-			Size: func() uint64 { return 3 },
+			Name:  "Acm Revision",
+			Size:  func() uint64 { return 3 },
+			Value: func() any { return &s.AcmRevision },
 		},
 		{
-			Name: "ProcessorIDList",
-			Size: func() uint64 { return 4 },
+			Name:  "Processor ID List",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.ProcessorIDList },
 		},
 	}
 }
@@ -461,39 +471,7 @@ func (s *ChipsetACModuleInformation) Layout() []LayoutField {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *ChipsetACModuleInformation) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "Chipset AC Module Information", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "UUID", "", &s.UUID, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Chipset ACM Type", "", &s.ChipsetACMType, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Version", "", &s.Version, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Length", "", &s.Length, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Chipset ID List", "", &s.ChipsetIDList, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Os Sinit Data Ver", "", &s.OsSinitDataVer, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Min Mle Header Ver", "", &s.MinMleHeaderVer, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Capabilities", "", &s.Capabilities, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Acm Version", "", &s.AcmVersion, opts...)...)
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Acm Revision", "", &s.AcmRevision, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Processor ID List", "", &s.ProcessorIDList, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return Common{}.PrettyString(depth, withHeader, s, "Chipset AC Module Information", opts...)
 }
 
 // NewChipsetACModuleInformationV5 returns a new instance of ChipsetACModuleInformationV5 with
@@ -583,12 +561,14 @@ func (s *ChipsetACModuleInformationV5) WriteTo(w io.Writer) (int64, error) {
 func (s *ChipsetACModuleInformationV5) Layout() []LayoutField {
 	return []LayoutField{
 		{
-			Name: "Base",
-			Size: func() uint64 { return s.Base.Common.TotalSize(&s.Base) },
+			Name:  "Base",
+			Size:  func() uint64 { return s.Base.Common.TotalSize(&s.Base) },
+			Value: func() any { return &s.Base },
 		},
 		{
-			Name: "TPMInfoList",
-			Size: func() uint64 { return 4 },
+			Name:  "TPM Info List",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.TPMInfoList },
 		},
 	}
 }
@@ -627,19 +607,5 @@ func (s *ChipsetACModuleInformationV5) Layout() []LayoutField {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *ChipsetACModuleInformationV5) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "Chipset AC Module Information V 5", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is subStruct
-	lines = append(lines, pretty.SubValue(depth+1, "Base", "", &s.Base, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "TPM Info List", "", &s.TPMInfoList, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return Common{}.PrettyString(depth, withHeader, s, "Chipset AC Module Information V 5", opts...)
 }
