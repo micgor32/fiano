@@ -23,34 +23,9 @@ func NewTPMInfoList() *TPMInfoList {
 
 // ReadFrom reads the TPMInfoList from 'r' in format defined in the document #575623.
 func (s *TPMInfoList) ReadFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// Capabilities (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Read(r, binary.LittleEndian, &s.Capabilities)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Capabilities': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Algorithms (ManifestFieldType: list)
-	{
-		var count uint16
-		err := binary.Read(r, binary.LittleEndian, &count)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read the count for field 'Algorithms': %w", err)
-		}
-		totalN += int64(binary.Size(count))
-		s.Algorithms = make([]Algorithm, count)
-
-		for idx := range s.Algorithms {
-			n, err := s.Algorithms[idx].ReadFrom(r)
-			if err != nil {
-				return totalN, fmt.Errorf("unable to read field 'Algorithms[%d]': %w", idx, err)
-			}
-			totalN += int64(n)
-		}
+	totalN, err := s.Common.ReadFrom(r, s)
+	if err != nil {
+		return 0, err
 	}
 
 	return totalN, nil
@@ -107,6 +82,7 @@ func (s *TPMInfoList) Layout() []LayoutField {
 			Name:  "Capabilities",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.Capabilities },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name: fmt.Sprintf("Algorithms: Array of \"TPM Info List\" of length %d", len(s.Algorithms)),
@@ -118,46 +94,28 @@ func (s *TPMInfoList) Layout() []LayoutField {
 				return size
 			},
 			Value: func() any { return &s.Algorithms },
+			Type:  ManifestFieldList,
+			ReadList: func(r io.Reader) (int64, error) {
+				var count uint16
+				err := binary.Read(r, binary.LittleEndian, &count)
+				if err != nil {
+					return 0, fmt.Errorf("unable to read the count for field 'Algorithms': %w", err)
+				}
+				totalN := int64(binary.Size(count))
+				s.Algorithms = make([]Algorithm, count)
+
+				for idx := range s.Algorithms {
+					n, err := s.Algorithms[idx].ReadFrom(r)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to read field 'Algorithms[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+				return totalN, nil
+			},
 		},
 	}
 }
-
-// // CapabilitiesSize returns the size in bytes of the value of field Capabilities
-// func (s *TPMInfoList) CapabilitiesTotalSize() uint64 {
-// 	return 4
-// }
-//
-// // AlgorithmsSize returns the size in bytes of the value of field Algorithms
-// func (s *TPMInfoList) AlgorithmsTotalSize() uint64 {
-// 	var size uint64
-// 	size += uint64(binary.Size(uint16(0)))
-// 	for idx := range s.Algorithms {
-// 		size += s.Algorithms[idx].TotalSize()
-// 	}
-// 	return size
-// }
-//
-// // CapabilitiesOffset returns the offset in bytes of field Capabilities
-// func (s *TPMInfoList) CapabilitiesOffset() uint64 {
-// 	return 0
-// }
-//
-// // AlgorithmsOffset returns the offset in bytes of field Algorithms
-// func (s *TPMInfoList) AlgorithmsOffset() uint64 {
-// 	return s.CapabilitiesOffset() + s.CapabilitiesTotalSize()
-// }
-//
-// // Size returns the total size of the TPMInfoList.
-// func (s *TPMInfoList) TotalSize() uint64 {
-// 	if s == nil {
-// 		return 0
-// 	}
-//
-// 	var size uint64
-// 	size += s.CapabilitiesTotalSize()
-// 	size += s.AlgorithmsTotalSize()
-// 	return size
-// }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *TPMInfoList) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

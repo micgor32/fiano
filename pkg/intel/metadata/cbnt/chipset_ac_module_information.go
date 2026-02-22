@@ -49,105 +49,9 @@ func ParseChipsetACModuleInformation(r io.Reader) (int64, ChipsetACModuleInforma
 
 // ReadFrom reads the ChipsetACModuleInformation from 'r' in format defined in the document #575623.
 func (s *ChipsetACModuleInformation) ReadFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// UUID (ManifestFieldType: arrayStatic)
-	{
-		n, err := 16, binary.Read(r, binary.LittleEndian, s.UUID[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'UUID': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ChipsetACMType (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.ChipsetACMType)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'ChipsetACMType': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Length (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.Length)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Length': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ChipsetIDList (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Read(r, binary.LittleEndian, &s.ChipsetIDList)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'ChipsetIDList': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// OsSinitDataVer (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Read(r, binary.LittleEndian, &s.OsSinitDataVer)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'OsSinitDataVer': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// MinMleHeaderVer (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Read(r, binary.LittleEndian, &s.MinMleHeaderVer)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'MinMleHeaderVer': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Capabilities (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Read(r, binary.LittleEndian, &s.Capabilities)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Capabilities': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// AcmVersion (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.AcmVersion)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'AcmVersion': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// AcmRevision (ManifestFieldType: arrayStatic)
-	{
-		n, err := 3, binary.Read(r, binary.LittleEndian, s.AcmRevision[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'AcmRevision': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ProcessorIDList (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Read(r, binary.LittleEndian, &s.ProcessorIDList)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'ProcessorIDList': %w", err)
-		}
-		totalN += int64(n)
+	totalN, err := s.Common.ReadFrom(r, s)
+	if err != nil {
+		return 0, err
 	}
 
 	return totalN, nil
@@ -277,190 +181,70 @@ func (s *ChipsetACModuleInformation) Layout() []LayoutField {
 			Name:  "UUID",
 			Size:  func() uint64 { return 16 },
 			Value: func() any { return &s.UUID },
+			Type:  ManifestFieldArrayStatic,
 		},
 		{
 			Name:  "Chipset ACM Type",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.ChipsetACMType },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.Version },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Length",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.Length },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Chipset ID List",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.ChipsetIDList },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Os Sinit Data Ver",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.OsSinitDataVer },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Min Mle Header Ver",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.MinMleHeaderVer },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Capabilities",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.Capabilities },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Acm Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.AcmVersion },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			Name:  "Acm Revision",
 			Size:  func() uint64 { return 3 },
 			Value: func() any { return &s.AcmRevision },
+			Type:  ManifestFieldArrayStatic,
 		},
 		{
 			Name:  "Processor ID List",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.ProcessorIDList },
+			Type:  ManifestFieldEndValue,
 		},
 	}
 }
-
-// // UUIDSize returns the size in bytes of the value of field UUID
-// func (s *ChipsetACModuleInformation) UUIDTotalSize() uint64 {
-// 	return 16
-// }
-//
-// // ChipsetACMTypeSize returns the size in bytes of the value of field ChipsetACMType
-// func (s *ChipsetACModuleInformation) ChipsetACMTypeTotalSize() uint64 {
-// 	return 1
-// }
-//
-// // VersionSize returns the size in bytes of the value of field Version
-// func (s *ChipsetACModuleInformation) VersionTotalSize() uint64 {
-// 	return 1
-// }
-//
-// // LengthSize returns the size in bytes of the value of field Length
-// func (s *ChipsetACModuleInformation) LengthTotalSize() uint64 {
-// 	return 2
-// }
-//
-// // ChipsetIDListSize returns the size in bytes of the value of field ChipsetIDList
-// func (s *ChipsetACModuleInformation) ChipsetIDListTotalSize() uint64 {
-// 	return 4
-// }
-//
-// // OsSinitDataVerSize returns the size in bytes of the value of field OsSinitDataVer
-// func (s *ChipsetACModuleInformation) OsSinitDataVerTotalSize() uint64 {
-// 	return 4
-// }
-//
-// // MinMleHeaderVerSize returns the size in bytes of the value of field MinMleHeaderVer
-// func (s *ChipsetACModuleInformation) MinMleHeaderVerTotalSize() uint64 {
-// 	return 4
-// }
-//
-// // CapabilitiesSize returns the size in bytes of the value of field Capabilities
-// func (s *ChipsetACModuleInformation) CapabilitiesTotalSize() uint64 {
-// 	return 4
-// }
-//
-// // AcmVersionSize returns the size in bytes of the value of field AcmVersion
-// func (s *ChipsetACModuleInformation) AcmVersionTotalSize() uint64 {
-// 	return 1
-// }
-//
-// // AcmRevisionSize returns the size in bytes of the value of field AcmRevision
-// func (s *ChipsetACModuleInformation) AcmRevisionTotalSize() uint64 {
-// 	return 3
-// }
-//
-// // ProcessorIDListSize returns the size in bytes of the value of field ProcessorIDList
-// func (s *ChipsetACModuleInformation) ProcessorIDListTotalSize() uint64 {
-// 	return 4
-// }
-//
-// // UUIDOffset returns the offset in bytes of field UUID
-// func (s *ChipsetACModuleInformation) UUIDOffset() uint64 {
-// 	return 0
-// }
-//
-// // ChipsetACMTypeOffset returns the offset in bytes of field ChipsetACMType
-// func (s *ChipsetACModuleInformation) ChipsetACMTypeOffset() uint64 {
-// 	return s.UUIDOffset() + s.UUIDTotalSize()
-// }
-//
-// // VersionOffset returns the offset in bytes of field Version
-// func (s *ChipsetACModuleInformation) VersionOffset() uint64 {
-// 	return s.ChipsetACMTypeOffset() + s.ChipsetACMTypeTotalSize()
-// }
-//
-// // LengthOffset returns the offset in bytes of field Length
-// func (s *ChipsetACModuleInformation) LengthOffset() uint64 {
-// 	return s.VersionOffset() + s.VersionTotalSize()
-// }
-//
-// // ChipsetIDListOffset returns the offset in bytes of field ChipsetIDList
-// func (s *ChipsetACModuleInformation) ChipsetIDListOffset() uint64 {
-// 	return s.LengthOffset() + s.LengthTotalSize()
-// }
-//
-// // OsSinitDataVerOffset returns the offset in bytes of field OsSinitDataVer
-// func (s *ChipsetACModuleInformation) OsSinitDataVerOffset() uint64 {
-// 	return s.ChipsetIDListOffset() + s.ChipsetIDListTotalSize()
-// }
-//
-// // MinMleHeaderVerOffset returns the offset in bytes of field MinMleHeaderVer
-// func (s *ChipsetACModuleInformation) MinMleHeaderVerOffset() uint64 {
-// 	return s.OsSinitDataVerOffset() + s.OsSinitDataVerTotalSize()
-// }
-//
-// // CapabilitiesOffset returns the offset in bytes of field Capabilities
-// func (s *ChipsetACModuleInformation) CapabilitiesOffset() uint64 {
-// 	return s.MinMleHeaderVerOffset() + s.MinMleHeaderVerTotalSize()
-// }
-//
-// // AcmVersionOffset returns the offset in bytes of field AcmVersion
-// func (s *ChipsetACModuleInformation) AcmVersionOffset() uint64 {
-// 	return s.CapabilitiesOffset() + s.CapabilitiesTotalSize()
-// }
-//
-// // AcmRevisionOffset returns the offset in bytes of field AcmRevision
-// func (s *ChipsetACModuleInformation) AcmRevisionOffset() uint64 {
-// 	return s.AcmVersionOffset() + s.AcmVersionTotalSize()
-// }
-//
-// // ProcessorIDListOffset returns the offset in bytes of field ProcessorIDList
-// func (s *ChipsetACModuleInformation) ProcessorIDListOffset() uint64 {
-// 	return s.AcmRevisionOffset() + s.AcmRevisionTotalSize()
-// }
-//
-// // Size returns the total size of the ChipsetACModuleInformation.
-// func (s *ChipsetACModuleInformation) TotalSize() uint64 {
-// 	if s == nil {
-// 		return 0
-// 	}
-//
-// 	var size uint64
-// 	size += s.UUIDTotalSize()
-// 	size += s.ChipsetACMTypeTotalSize()
-// 	size += s.VersionTotalSize()
-// 	size += s.LengthTotalSize()
-// 	size += s.ChipsetIDListTotalSize()
-// 	size += s.OsSinitDataVerTotalSize()
-// 	size += s.MinMleHeaderVerTotalSize()
-// 	size += s.CapabilitiesTotalSize()
-// 	size += s.AcmVersionTotalSize()
-// 	size += s.AcmRevisionTotalSize()
-// 	size += s.ProcessorIDListTotalSize()
-// 	return size
-// }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *ChipsetACModuleInformation) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
@@ -479,24 +263,9 @@ func NewChipsetACModuleInformationV5() *ChipsetACModuleInformationV5 {
 
 // ReadFrom reads the ChipsetACModuleInformationV5 from 'r' in format defined in the document #575623.
 func (s *ChipsetACModuleInformationV5) ReadFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// Base (ManifestFieldType: subStruct)
-	{
-		n, err := s.Base.ReadFrom(r)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Base': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// TPMInfoList (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Read(r, binary.LittleEndian, &s.TPMInfoList)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'TPMInfoList': %w", err)
-		}
-		totalN += int64(n)
+	totalN, err := s.Common.ReadFrom(r, s)
+	if err != nil {
+		return 0, err
 	}
 
 	return totalN, nil
@@ -546,46 +315,16 @@ func (s *ChipsetACModuleInformationV5) Layout() []LayoutField {
 			Name:  "Base",
 			Size:  func() uint64 { return s.Base.Common.TotalSize(&s.Base) },
 			Value: func() any { return &s.Base },
+			Type:  ManifestFieldSubStruct,
 		},
 		{
 			Name:  "TPM Info List",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.TPMInfoList },
+			Type:  ManifestFieldSubStruct,
 		},
 	}
 }
-
-// // BaseSize returns the size in bytes of the value of field Base
-// func (s *ChipsetACModuleInformationV5) BaseTotalSize() uint64 {
-// 	return s.Base.TotalSize()
-// }
-//
-// // TPMInfoListSize returns the size in bytes of the value of field TPMInfoList
-// func (s *ChipsetACModuleInformationV5) TPMInfoListTotalSize() uint64 {
-// 	return 4
-// }
-//
-// // BaseOffset returns the offset in bytes of field Base
-// func (s *ChipsetACModuleInformationV5) BaseOffset() uint64 {
-// 	return 0
-// }
-//
-// // TPMInfoListOffset returns the offset in bytes of field TPMInfoList
-// func (s *ChipsetACModuleInformationV5) TPMInfoListOffset() uint64 {
-// 	return s.BaseOffset() + s.BaseTotalSize()
-// }
-//
-// // Size returns the total size of the ChipsetACModuleInformationV5.
-// func (s *ChipsetACModuleInformationV5) TotalSize() uint64 {
-// 	if s == nil {
-// 		return 0
-// 	}
-//
-// 	var size uint64
-// 	size += s.BaseTotalSize()
-// 	size += s.TPMInfoListTotalSize()
-// 	return size
-// }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *ChipsetACModuleInformationV5) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
