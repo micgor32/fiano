@@ -47,13 +47,6 @@ func ParseChipsetACModuleInformation(r io.Reader) (int64, ChipsetACModuleInforma
 	return total, result, err
 }
 
-// Validate (recursively) checks the structure if there are any unexpected
-// values. It returns an error if so.
-func (s *ChipsetACModuleInformation) Validate() error {
-	// TODO: either remove or add actual logic here
-	return nil
-}
-
 // ReadFrom reads the ChipsetACModuleInformation from 'r' in format defined in the document #575623.
 func (s *ChipsetACModuleInformation) ReadFrom(r io.Reader) (int64, error) {
 	totalN := int64(0)
@@ -482,17 +475,6 @@ func NewChipsetACModuleInformationV5() *ChipsetACModuleInformationV5 {
 	s.Base = *NewChipsetACModuleInformation()
 	s.Rehash()
 	return s
-}
-
-// Validate (recursively) checks the structure if there are any unexpected
-// values. It returns an error if so.
-func (s *ChipsetACModuleInformationV5) Validate() error {
-	// Recursively validating a child structure:
-	if err := s.Base.Validate(); err != nil {
-		return fmt.Errorf("error on field 'Base': %w", err)
-	}
-
-	return nil
 }
 
 // ReadFrom reads the ChipsetACModuleInformationV5 from 'r' in format defined in the document #575623.
