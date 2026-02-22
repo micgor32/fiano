@@ -136,6 +136,6 @@ func (v Algorithm) WriteTo(w io.Writer) (int64, error) {
 }
 
 // ReadFrom reads the Algorithm from 'r' in binary format.
-func (v Algorithm) ReadFrom(r io.Reader) (int64, error) {
+func (v *Algorithm) ReadFrom(r io.Reader) (int64, error) {
 	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
 }
