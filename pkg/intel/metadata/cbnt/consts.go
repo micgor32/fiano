@@ -70,6 +70,10 @@ const (
 	ManifestFieldArrayDynamicWithPrefix ManifestFieldType = "arrayDynamicWithPrefix"
 	ManifestFieldList                   ManifestFieldType = "list"
 	ManifestFieldSubStruct              ManifestFieldType = "subStruct"
+
+	// StructureIDManifest is the StructureID (in terms of
+	// the document #575623) of element 'Manifest'.
+	StructureIDManifest = "__KEYM__"
 )
 
 // Yes, I know a file called "consts" is not a best place for a variable definition,
