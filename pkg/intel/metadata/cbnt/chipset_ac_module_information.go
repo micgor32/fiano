@@ -178,72 +178,109 @@ func (s *ChipsetACModuleInformation) WriteTo(w io.Writer) (int64, error) {
 func (s *ChipsetACModuleInformation) Layout() []LayoutField {
 	return []LayoutField{
 		{
+			ID:    0,
 			Name:  "UUID",
 			Size:  func() uint64 { return 16 },
 			Value: func() any { return &s.UUID },
 			Type:  ManifestFieldArrayStatic,
 		},
 		{
+			ID:    1,
 			Name:  "Chipset ACM Type",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.ChipsetACMType },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    2,
 			Name:  "Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.Version },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    3,
 			Name:  "Length",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.Length },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    4,
 			Name:  "Chipset ID List",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.ChipsetIDList },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    5,
 			Name:  "Os Sinit Data Ver",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.OsSinitDataVer },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    6,
 			Name:  "Min Mle Header Ver",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.MinMleHeaderVer },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    7,
 			Name:  "Capabilities",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.Capabilities },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    8,
 			Name:  "Acm Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.AcmVersion },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    9,
 			Name:  "Acm Revision",
 			Size:  func() uint64 { return 3 },
 			Value: func() any { return &s.AcmRevision },
 			Type:  ManifestFieldArrayStatic,
 		},
 		{
+			ID:    10,
 			Name:  "Processor ID List",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.ProcessorIDList },
 			Type:  ManifestFieldEndValue,
 		},
 	}
+}
+
+func (s *ChipsetACModuleInformation) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *ChipsetACModuleInformation) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *ChipsetACModuleInformation) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
@@ -312,18 +349,46 @@ func (s *ChipsetACModuleInformationV5) WriteTo(w io.Writer) (int64, error) {
 func (s *ChipsetACModuleInformationV5) Layout() []LayoutField {
 	return []LayoutField{
 		{
+			ID:    0,
 			Name:  "Base",
 			Size:  func() uint64 { return s.Base.Common.TotalSize(&s.Base) },
 			Value: func() any { return &s.Base },
 			Type:  ManifestFieldSubStruct,
 		},
 		{
+			ID:    1,
 			Name:  "TPM Info List",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.TPMInfoList },
 			Type:  ManifestFieldSubStruct,
 		},
 	}
+}
+
+func (s *ChipsetACModuleInformationV5) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *ChipsetACModuleInformationV5) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *ChipsetACModuleInformationV5) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.

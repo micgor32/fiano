@@ -22,28 +22,6 @@ import (
 	"github.com/tjfoc/gmsm/sm2"
 )
 
-// TODO: same here
-
-// InBits returns the size in bits.
-func (ks BitSize) InBits() uint16 {
-	return uint16(ks)
-}
-
-// InBytes returns the size in bytes.
-func (ks BitSize) InBytes() uint16 {
-	return uint16(ks >> 3)
-}
-
-// SetInBits sets the size in bits.
-func (ks *BitSize) SetInBits(amountOfBits uint16) {
-	*ks = BitSize(amountOfBits)
-}
-
-// SetInBytes sets the size in bytes.
-func (ks *BitSize) SetInBytes(amountOfBytes uint16) {
-	*ks = BitSize(amountOfBytes << 3)
-}
-
 // keyDataSize returns the expected length of Data for specified
 // KeyAlg and KeySize.
 func (k Key) keyDataSize() int64 {
@@ -236,24 +214,28 @@ func NewKey() *Key {
 func (k *Key) Layout() []LayoutField {
 	return []LayoutField{
 		{
+			ID:    0,
 			Name:  "Key Alg",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &k.KeyAlg },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    1,
 			Name:  "Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &k.Version },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    2,
 			Name:  "Key Size",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &k.KeySize },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    3,
 			Name:  "Data",
 			Size:  func() uint64 { return uint64(k.keyDataSize()) },
 			Value: func() any { return &k.Data },
@@ -338,63 +320,57 @@ func (s *Key) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// // KeyAlgSize returns the size in bytes of the value of field KeyAlg
-// func (s *Key) KeyAlgTotalSize() uint64 {
-// 	return 2
-// }
+func (s *Key) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		// normally it would be 0, but ret is already 0 if we land here
+		return ret, fmt.Errorf("Key: %v", err)
+	}
 
-// // VersionSize returns the size in bytes of the value of field Version
-// func (s *Key) VersionTotalSize() uint64 {
-// 	return 1
-// }
+	return ret, nil
+}
 
-// // KeySizeSize returns the size in bytes of the value of field KeySize
-// func (s *Key) KeySizeTotalSize() uint64 {
-// 	return 2
-// }
+func (s *Key) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("Key: %v", err)
+	}
 
-// // DataSize returns the size in bytes of the value of field Data
-// func (s *Key) DataTotalSize() uint64 {
-// 	return uint64(len(s.Data))
-// }
+	return ret, nil
+}
 
-// // KeyAlgOffset returns the offset in bytes of field KeyAlg
-// func (s *Key) KeyAlgOffset() uint64 {
-// 	return 0
-// }
+// Size returns the total size of the Key.
+func (s *Key) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
 
-// // VersionOffset returns the offset in bytes of field Version
-// func (s *Key) VersionOffset() uint64 {
-// 	return s.KeyAlgOffset() + s.KeyAlgTotalSize()
-// }
-
-// // KeySizeOffset returns the offset in bytes of field KeySize
-// func (s *Key) KeySizeOffset() uint64 {
-// 	return s.VersionOffset() + s.VersionTotalSize()
-// }
-
-// // DataOffset returns the offset in bytes of field Data
-// func (s *Key) DataOffset() uint64 {
-// 	return s.KeySizeOffset() + s.KeySizeTotalSize()
-// }
-
-// // Size returns the total size of the Key.
-// func (s *Key) TotalSize() uint64 {
-// 	if s == nil {
-// 		return 0
-// 	}
-
-// 	var size uint64
-// 	size += s.KeyAlgTotalSize()
-// 	size += s.VersionTotalSize()
-// 	size += s.KeySizeTotalSize()
-// 	size += s.DataTotalSize()
-// 	return size
-// }
+	return s.Common.TotalSize(s)
+}
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *Key) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return Common{}.PrettyString(depth, withHeader, s, "Key", opts...)
+}
+
+// InBits returns the size in bits.
+func (ks BitSize) InBits() uint16 {
+	return uint16(ks)
+}
+
+// InBytes returns the size in bytes.
+func (ks BitSize) InBytes() uint16 {
+	return uint16(ks >> 3)
+}
+
+// SetInBits sets the size in bits.
+func (ks *BitSize) SetInBits(amountOfBits uint16) {
+	*ks = BitSize(amountOfBits)
+}
+
+// SetInBytes sets the size in bytes.
+func (ks *BitSize) SetInBytes(amountOfBytes uint16) {
+	*ks = BitSize(amountOfBytes << 3)
 }
 
 // PrettyString returns the bits of the flags in an easy-to-read format.

@@ -115,30 +115,35 @@ func (s *Signature) WriteTo(w io.Writer) (int64, error) {
 func (s *Signature) Layout() []LayoutField {
 	return []LayoutField{
 		{
+			ID:    0,
 			Name:  "Sig Scheme",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.SigScheme },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    1,
 			Name:  "Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.Version },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    2,
 			Name:  "Key Size",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.KeySize },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    3,
 			Name:  "Hash Alg",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.HashAlg },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:    4,
 			Name:  "Data",
 			Size:  func() uint64 { return uint64(s.KeySize.InBytes()) },
 			Value: func() any { return &s.Data },
@@ -147,70 +152,32 @@ func (s *Signature) Layout() []LayoutField {
 	}
 }
 
-// // SigSchemeSize returns the size in bytes of the value of field SigScheme
-// func (s *Signature) SigSchemeTotalSize() uint64 {
-// 	return 2
-// }
-//
-// // VersionSize returns the size in bytes of the value of field Version
-// func (s *Signature) VersionTotalSize() uint64 {
-// 	return 1
-// }
-//
-// // KeySizeSize returns the size in bytes of the value of field KeySize
-// func (s *Signature) KeySizeTotalSize() uint64 {
-// 	return 2
-// }
-//
-// // HashAlgSize returns the size in bytes of the value of field HashAlg
-// func (s *Signature) HashAlgTotalSize() uint64 {
-// 	return 2
-// }
-//
-// // DataSize returns the size in bytes of the value of field Data
-// func (s *Signature) DataTotalSize() uint64 {
-// 	return uint64(len(s.Data))
-// }
-//
-// // SigSchemeOffset returns the offset in bytes of field SigScheme
-// func (s *Signature) SigSchemeOffset() uint64 {
-// 	return 0
-// }
-//
-// // VersionOffset returns the offset in bytes of field Version
-// func (s *Signature) VersionOffset() uint64 {
-// 	return s.SigSchemeOffset() + s.SigSchemeTotalSize()
-// }
-//
-// // KeySizeOffset returns the offset in bytes of field KeySize
-// func (s *Signature) KeySizeOffset() uint64 {
-// 	return s.VersionOffset() + s.VersionTotalSize()
-// }
-//
-// // HashAlgOffset returns the offset in bytes of field HashAlg
-// func (s *Signature) HashAlgOffset() uint64 {
-// 	return s.KeySizeOffset() + s.KeySizeTotalSize()
-// }
-//
-// // DataOffset returns the offset in bytes of field Data
-// func (s *Signature) DataOffset() uint64 {
-// 	return s.HashAlgOffset() + s.HashAlgTotalSize()
-// }
-//
-// // Size returns the total size of the Signature.
-// func (s *Signature) TotalSize() uint64 {
-// 	if s == nil {
-// 		return 0
-// 	}
-//
-// 	var size uint64
-// 	size += s.SigSchemeTotalSize()
-// 	size += s.VersionTotalSize()
-// 	size += s.KeySizeTotalSize()
-// 	size += s.HashAlgTotalSize()
-// 	size += s.DataTotalSize()
-// 	return size
-// }
+func (s *Signature) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *Signature) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+// Size returns the total size of the Signature.
+func (s *Signature) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	return s.Common.TotalSize(s)
+}
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *Signature) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

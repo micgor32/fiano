@@ -38,6 +38,7 @@ type (
 	ManifestFieldType string
 
 	LayoutField struct {
+		ID    int
 		Name  string
 		Size  func() uint64
 		Value func() any

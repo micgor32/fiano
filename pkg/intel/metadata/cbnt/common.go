@@ -25,17 +25,27 @@ func (Common) TotalSize(p LayoutProvider) uint64 {
 	return total
 }
 
-func (Common) OffsetOf(p LayoutProvider, fieldName string) uint64 {
+func (Common) SizeOf(p LayoutProvider, id int) (uint64, error) {
+	for _, f := range p.Layout() {
+		if f.ID == id {
+			return f.Size(), nil
+		}
+	}
+
+	return 0, fmt.Errorf("has no field of ID %d", id)
+}
+
+func (Common) OffsetOf(p LayoutProvider, id int) (uint64, error) {
 	var offset uint64
 
 	for _, f := range p.Layout() {
-		if f.Name == fieldName {
-			return offset
+		if f.ID == id {
+			return offset, nil
 		}
 		offset += f.Size()
 	}
 
-	return 0
+	return 0, fmt.Errorf("has no field of ID %d", id)
 }
 
 func (Common) PrettyString(depth uint, withHeader bool, p LayoutProvider, structName string, opts ...pretty.Option) string {
@@ -49,6 +59,10 @@ func (Common) PrettyString(depth uint, withHeader bool, p LayoutProvider, struct
 	}
 
 	for _, f := range p.Layout() {
+		if f.Type == ManifestFieldList {
+			// Handling type detection here would be dirty here, let's not do that and just skip
+			continue
+		}
 		lines = append(lines, pretty.SubValue(depth+1, f.Name, "", f.Value(), opts...)...)
 	}
 
@@ -106,6 +120,58 @@ func (Common) ReadFrom(r io.Reader, p LayoutProvider) (int64, error) {
 	}
 
 	return totalN, nil
+}
+
+func (Common) WriteTo(w io.Writer, p LayoutProvider) (int64, error) {
+	totalN := int64(0)
+	// TODO: add rehash, this could be implemented per type since
+	// not all types define it (well they do but for some its just ret nil :D).
+	// for _, f := range p.Layout() {
+	// 	switch f.Type {
+	// 	case ManifestFieldEndValue:
+	// 		totalN, err := writeStatic(w, f.Size(), f.Value())
+	// 		if err != nil {
+	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
+	// 		}
+	// 	case ManifestFieldArrayDynamicWithSize:
+	// 		size := uint16(f.Size())
+	// 		totalN, err := writeArrayDynamic(r, &size, f.Value())
+	// 		if err != nil {
+	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
+	// 		}
+	// 	case ManifestFieldArrayDynamicWithPrefix:
+	// 		totalN, err := writeArrayDynamic(r, nil, f.Value())
+	// 		if err != nil {
+	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
+	// 		}
+	// 	case ManifestFieldList:
+	// 		if f.ReadList == nil {
+	// 			return totalN, fmt.Errorf("field '%s' has no list reader", f.Name)
+	// 		}
+	// 		totalN, err := f.ReadList(r)
+	// 		if err != nil {
+	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
+	// 		}
+	// 	case ManifestFieldArrayStatic:
+	// 		totalN, err := writeStatic(r, f.Size(), f.Value())
+	// 		if err != nil {
+	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
+	// 		}
+	// 	case ManifestFieldSubStruct:
+	// 		fieldValue := f.Value()
+	// 		sub, ok := fieldValue.(io.ReaderFrom)
+	// 		if !ok {
+	// 			return totalN, fmt.Errorf("field '%s' does not implement io.ReaderFrom", f.Name)
+	// 		}
+	// 		totalN, err := writeSubStruct(r, sub)
+	// 		if err != nil {
+	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
+	// 		}
+	// 	}
+	// }
+
+	return totalN, nil
+
 }
 
 // We have 5 possible types of ManifestFieldType:

@@ -79,12 +79,14 @@ func (s *TPMInfoList) WriteTo(w io.Writer) (int64, error) {
 func (s *TPMInfoList) Layout() []LayoutField {
 	return []LayoutField{
 		{
+			ID:    0,
 			Name:  "Capabilities",
 			Size:  func() uint64 { return 4 },
 			Value: func() any { return &s.Capabilities },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:   1,
 			Name: fmt.Sprintf("Algorithms: Array of \"TPM Info List\" of length %d", len(s.Algorithms)),
 			Size: func() uint64 {
 				size := uint64(binary.Size(uint16(0)))
@@ -115,6 +117,32 @@ func (s *TPMInfoList) Layout() []LayoutField {
 			},
 		},
 	}
+}
+
+func (s *TPMInfoList) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *TPMInfoList) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *TPMInfoList) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.

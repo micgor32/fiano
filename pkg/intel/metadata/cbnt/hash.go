@@ -93,12 +93,14 @@ func (s *HashList) WriteTo(w io.Writer) (int64, error) {
 func (s *HashList) Layout() []LayoutField {
 	return []LayoutField{
 		{
+			ID:    0,
 			Name:  "Size",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.Size },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:   1,
 			Name: fmt.Sprintf("List: Array of \"Hash List\" of length %d", len(s.List)),
 			Size: func() uint64 {
 				size := uint64(binary.Size(uint16(0)))
@@ -133,42 +135,33 @@ func (s *HashList) Layout() []LayoutField {
 	}
 }
 
-// // SizeSize returns the size in bytes of the value of field Size
-// func (s *HashList) SizeTotalSize() uint64 {
-// 	return 2
-// }
-//
-// // ListSize returns the size in bytes of the value of field List
-// func (s *HashList) ListTotalSize() uint64 {
-// 	var size uint64
-// 	size += uint64(binary.Size(uint16(0)))
-// 	for idx := range s.List {
-// 		size += s.List[idx].TotalSize()
-// 	}
-// 	return size
-// }
-//
-// // SizeOffset returns the offset in bytes of field Size
-// func (s *HashList) SizeOffset() uint64 {
-// 	return 0
-// }
-//
-// // ListOffset returns the offset in bytes of field List
-// func (s *HashList) ListOffset() uint64 {
-// 	return s.SizeOffset() + s.SizeTotalSize()
-// }
-//
-// // Size returns the total size of the HashList.
-// func (s *HashList) TotalSize() uint64 {
-// 	if s == nil {
-// 		return 0
-// 	}
-//
-// 	var size uint64
-// 	size += s.SizeTotalSize()
-// 	size += s.ListTotalSize()
-// 	return size
-// }
+func (s *HashList) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		// normally it would be 0, but ret is already 0 if we land here
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *HashList) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashList: %v", err)
+	}
+
+	return ret, nil
+}
+
+// Size returns the total size of the HashList.
+func (s *HashList) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	return s.Common.TotalSize(s)
+}
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *HashList) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
@@ -245,12 +238,14 @@ func (s *HashStructure) WriteTo(w io.Writer) (int64, error) {
 func (s *HashStructure) Layout() []LayoutField {
 	return []LayoutField{
 		{
+			ID:    0,
 			Name:  "Hash Alg",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.HashAlg },
 			Type:  ManifestFieldEndValue,
 		},
 		{
+			ID:   1,
 			Name: "Hash Buffer",
 			Size: func() uint64 {
 				h, err := s.HashAlg.Hash()
@@ -265,39 +260,32 @@ func (s *HashStructure) Layout() []LayoutField {
 	}
 }
 
-// // HashAlgSize returns the size in bytes of the value of field HashAlg
-// func (s *HashStructure) HashAlgTotalSize() uint64 {
-// 	return 2
-// }
-//
-// // HashBufferSize returns the size in bytes of the value of field HashBuffer
-// func (s *HashStructure) HashBufferTotalSize() uint64 {
-// 	size := uint64(binary.Size(uint16(0)))
-// 	size += uint64(len(s.HashBuffer))
-// 	return size
-// }
-//
-// // HashAlgOffset returns the offset in bytes of field HashAlg
-// func (s *HashStructure) HashAlgOffset() uint64 {
-// 	return 0
-// }
-//
-// // HashBufferOffset returns the offset in bytes of field HashBuffer
-// func (s *HashStructure) HashBufferOffset() uint64 {
-// 	return s.HashAlgOffset() + s.HashAlgTotalSize()
-// }
-//
-// // Size returns the total size of the HashStructure.
-// func (s *HashStructure) TotalSize() uint64 {
-// 	if s == nil {
-// 		return 0
-// 	}
-//
-// 	var size uint64
-// 	size += s.HashAlgTotalSize()
-// 	size += s.HashBufferTotalSize()
-// 	return size
-// }
+func (s *HashStructure) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		// normally it would be 0, but ret is already 0 if we land here
+		return ret, fmt.Errorf("HashStructure: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *HashStructure) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashStructure: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *HashStructure) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	return s.Common.TotalSize(s)
+}
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *HashStructure) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
