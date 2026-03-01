@@ -138,13 +138,7 @@ type (
 		AcmVersion      uint8
 		AcmRevision     [3]uint8
 		ProcessorIDList uint32
-	}
-
-	// ChipsetACModuleInformationV5 represents Chipset AC Module Information Table for version >= 5
-	ChipsetACModuleInformationV5 struct {
-		Common
-		Base        ChipsetACModuleInformation
-		TPMInfoList uint32
+		TPMInfoList     uint32
 	}
 
 	// TPM2PCRExtendPolicySupport defined TPM2 PCR Extend policy support.
