@@ -28,13 +28,6 @@ type Manifest interface {
 	Rehash()
 	RehashRecursive()
 	WriteTo(w io.Writer) (int64, error)
-	KMSVNTotalSize() uint64
-	KMIDTotalSize() uint64
-	KeyAndSignatureTotalSize() uint64
-	StructInfoOffset() uint64
-	KMSVNOffset() uint64
-	KMIDOffset() uint64
-	KeyAndSignatureOffset() uint64
 	TotalSize() uint64
 	PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string
 	Print()

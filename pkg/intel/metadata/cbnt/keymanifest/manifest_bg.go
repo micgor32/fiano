@@ -258,102 +258,66 @@ func (s *BGManifest) WriteTo(w io.Writer) (int64, error) {
 func (s *BGManifest) Layout() []cbnt.LayoutField {
 	return []cbnt.LayoutField{
 		{
+			ID:    0,
 			Name:  "Struct Info",
-			Size:  func() uint64 { return s.StructInfo.TotalSize(&s.StructInfo) },
+			Size:  func() uint64 { return s.StructInfo.TotalSize() },
 			Value: func() any { return &s.StructInfo },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
+			ID:    1,
 			Name:  "KM Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.KMVersion },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
+			ID:    2,
 			Name:  "KMSVN",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.KMSVN },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
+			ID:    3,
 			Name:  "KMID",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.KMID },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
+			ID:    4,
 			Name:  "BP Key",
-			Size:  func() uint64 { return s.BPKey.TotalSize(&s.BPKey) },
+			Size:  func() uint64 { return s.BPKey.TotalSize() },
 			Value: func() any { return &s.BPKey },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
+			ID:    5,
 			Name:  "Key And Signature",
-			Size:  func() uint64 { return s.KeyAndSignature.TotalSize(&s.KeyAndSignature) },
+			Size:  func() uint64 { return s.KeyAndSignature.TotalSize() },
 			Value: func() any { return &s.KeyAndSignature },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 	}
 }
 
-// StructInfoSize returns the size in bytes of the value of field StructInfo
-func (s *BGManifest) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize(&s.StructInfo)
+func (s *BGManifest) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("CBnTManifest: %v", err)
+	}
+
+	return ret, nil
 }
 
-// KMVersionSize returns the size in bytes of the value of field KMVersion
-func (s *BGManifest) KMVersionTotalSize() uint64 {
-	return 1
-}
+func (s *BGManifest) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("CBnTManifest: %v", err)
+	}
 
-// KMSVNSize returns the size in bytes of the value of field KMSVN
-func (s *BGManifest) KMSVNTotalSize() uint64 {
-	return 1
-}
-
-// KMIDSize returns the size in bytes of the value of field KMID
-func (s *BGManifest) KMIDTotalSize() uint64 {
-	return 1
-}
-
-// BPKeySize returns the size in bytes of the value of field BPKey
-func (s *BGManifest) BPKeyTotalSize() uint64 {
-	return s.BPKey.TotalSize(&s.BPKey)
-}
-
-// KeyAndSignatureSize returns the size in bytes of the value of field KeyAndSignature
-func (s *BGManifest) KeyAndSignatureTotalSize() uint64 {
-	return s.KeyAndSignature.TotalSize(&s.KeyAndSignature)
-}
-
-// StructInfoOffset returns the offset in bytes of field StructInfo
-func (s *BGManifest) StructInfoOffset() uint64 {
-	return s.Common.OffsetOf(s, "Struct Info")
-}
-
-// KMVersionOffset returns the offset in bytes of field KMVersion
-func (s *BGManifest) KMVersionOffset() uint64 {
-	return s.Common.OffsetOf(s, "KM Version")
-}
-
-// KMSVNOffset returns the offset in bytes of field KMSVN
-func (s *BGManifest) KMSVNOffset() uint64 {
-	return s.Common.OffsetOf(s, "KMSVN")
-}
-
-// KMIDOffset returns the offset in bytes of field KMID
-func (s *BGManifest) KMIDOffset() uint64 {
-	return s.Common.OffsetOf(s, "KMID")
-}
-
-// BPKeyOffset returns the offset in bytes of field BPKey
-func (s *BGManifest) BPKeyOffset() uint64 {
-	return s.Common.OffsetOf(s, "BP Key")
-}
-
-// KeyAndSignatureOffset returns the offset in bytes of field KeyAndSignature
-func (s *BGManifest) KeyAndSignatureOffset() uint64 {
-	return s.Common.OffsetOf(s, "Key And Signature")
+	return ret, nil
 }
 
 // Size returns the total size of the Manifest.

@@ -113,7 +113,11 @@ func (s *CBnTManifest) Validate() error {
 		// }
 	case 0x21:
 		// See tag "rehashValue"
-		expectedValue := uint16(s.KeyAndSignatureOffset())
+		v, err := s.OffsetOf(9)
+		if err != nil {
+			// see below
+		}
+		expectedValue := uint16(v)
 		if s.KeyManifestSignatureOffset != expectedValue {
 			return fmt.Errorf("field 'KeyManifestSignatureOffset' expects write-value '%v', but has %v", expectedValue, s.KeyManifestSignatureOffset)
 		}
@@ -269,7 +273,11 @@ func (s *CBnTManifest) RehashRecursive() {
 func (s *CBnTManifest) Rehash() {
 	s.Variable0 = 0
 	s.ElementSize = 0
-	s.KeyManifestSignatureOffset = uint16(s.KeyAndSignatureOffset())
+	v, err := s.OffsetOf(9)
+	if err != nil {
+		// TODO: this will never be true, but still lets think of how to handle
+	}
+	s.KeyManifestSignatureOffset = uint16(v)
 }
 
 // WriteTo writes the Manifest into 'w' in format defined in
@@ -373,48 +381,56 @@ func (s *CBnTManifest) WriteTo(w io.Writer) (int64, error) {
 func (s *CBnTManifest) Layout() []cbnt.LayoutField {
 	return []cbnt.LayoutField{
 		{
+			ID:    0,
 			Name:  "Struct Info",
-			Size:  func() uint64 { return s.StructInfo.TotalSize(&s.StructInfo) },
+			Size:  func() uint64 { return s.StructInfo.TotalSize() },
 			Value: func() any { return &s.StructInfo },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
+			ID:    1,
 			Name:  "Key Manifest Signature Offset",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.KeyManifestSignatureOffset },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
+			ID:    3,
 			Name:  "Reserved 2",
 			Size:  func() uint64 { return 3 },
 			Value: func() any { return &s.Reserved2 },
 			Type:  cbnt.ManifestFieldArrayStatic,
 		},
 		{
+			ID:    4,
 			Name:  "Revision",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.Revision },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
+			ID:    5,
 			Name:  "KMSVN",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.KMSVN },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
+			ID:    6,
 			Name:  "KMID",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.KMID },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
+			ID:    7,
 			Name:  "Pub Key Hash Alg",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.PubKeyHashAlg },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
+			ID:   8,
 			Name: fmt.Sprintf("Hash: Array of \"Key Manifest\" of length %d", len(s.Hash)),
 			Size: func() uint64 {
 				size := uint64(binary.Size(uint16(0)))
@@ -444,107 +460,31 @@ func (s *CBnTManifest) Layout() []cbnt.LayoutField {
 			},
 		},
 		{
+			ID:    9,
 			Name:  "Key And Signature",
-			Size:  func() uint64 { return s.KeyAndSignature.TotalSize(&s.KeyAndSignature) },
+			Size:  func() uint64 { return s.KeyAndSignature.TotalSize() },
 			Value: func() any { return &s.KeyAndSignature },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 	}
 }
 
-// StructInfoSize returns the size in bytes of the value of field StructInfo
-func (s *CBnTManifest) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize(&s.StructInfo)
-}
-
-// KeyManifestSignatureOffsetSize returns the size in bytes of the value of field KeyManifestSignatureOffset
-func (s *CBnTManifest) KeyManifestSignatureOffsetTotalSize() uint64 {
-	return 2
-}
-
-// Reserved2Size returns the size in bytes of the value of field Reserved2
-func (s *CBnTManifest) Reserved2TotalSize() uint64 {
-	return 3
-}
-
-// RevisionSize returns the size in bytes of the value of field Revision
-func (s *CBnTManifest) RevisionTotalSize() uint64 {
-	return 1
-}
-
-// KMSVNSize returns the size in bytes of the value of field KMSVN
-func (s *CBnTManifest) KMSVNTotalSize() uint64 {
-	return 1
-}
-
-// KMIDSize returns the size in bytes of the value of field KMID
-func (s *CBnTManifest) KMIDTotalSize() uint64 {
-	return 1
-}
-
-// PubKeyHashAlgSize returns the size in bytes of the value of field PubKeyHashAlg
-func (s *CBnTManifest) PubKeyHashAlgTotalSize() uint64 {
-	return 2
-}
-
-// HashSize returns the size in bytes of the value of field Hash
-func (s *CBnTManifest) HashTotalSize() uint64 {
-	var size uint64
-	size += uint64(binary.Size(uint16(0)))
-	for idx := range s.Hash {
-		size += s.Hash[idx].TotalSize()
+func (s *CBnTManifest) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("CBnTManifest: %v", err)
 	}
-	return size
+
+	return ret, nil
 }
 
-// KeyAndSignatureSize returns the size in bytes of the value of field KeyAndSignature
-func (s *CBnTManifest) KeyAndSignatureTotalSize() uint64 {
-	return s.KeyAndSignature.TotalSize(&s.KeyAndSignature)
-}
+func (s *CBnTManifest) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("CBnTManifest: %v", err)
+	}
 
-// StructInfoOffset returns the offset in bytes of field StructInfo
-func (s *CBnTManifest) StructInfoOffset() uint64 {
-	return s.Common.OffsetOf(s, "Struct Info")
-}
-
-// KeyManifestSignatureOffsetOffset returns the offset in bytes of field KeyManifestSignatureOffset
-func (s *CBnTManifest) KeyManifestSignatureOffsetOffset() uint64 {
-	return s.Common.OffsetOf(s, "Key Manifest Signature Offset")
-}
-
-// Reserved2Offset returns the offset in bytes of field Reserved2
-func (s *CBnTManifest) Reserved2Offset() uint64 {
-	return s.Common.OffsetOf(s, "Reserved 2")
-}
-
-// RevisionOffset returns the offset in bytes of field Revision
-func (s *CBnTManifest) RevisionOffset() uint64 {
-	return s.Common.OffsetOf(s, "Revision")
-}
-
-// KMSVNOffset returns the offset in bytes of field KMSVN
-func (s *CBnTManifest) KMSVNOffset() uint64 {
-	return s.Common.OffsetOf(s, "KMSVN")
-}
-
-// KMIDOffset returns the offset in bytes of field KMID
-func (s *CBnTManifest) KMIDOffset() uint64 {
-	return s.Common.OffsetOf(s, "KMID")
-}
-
-// PubKeyHashAlgOffset returns the offset in bytes of field PubKeyHashAlg
-func (s *CBnTManifest) PubKeyHashAlgOffset() uint64 {
-	return s.Common.OffsetOf(s, "Pub Key Hash Alg")
-}
-
-// HashOffset returns the offset in bytes of field Hash
-func (s *CBnTManifest) HashOffset() uint64 {
-	return s.Common.OffsetOf(s, "Hash")
-}
-
-// KeyAndSignatureOffset returns the offset in bytes of field KeyAndSignature
-func (s *CBnTManifest) KeyAndSignatureOffset() uint64 {
-	return s.Common.OffsetOf(s, "Key And Signature")
+	return ret, nil
 }
 
 // Size returns the total size of the Manifest.

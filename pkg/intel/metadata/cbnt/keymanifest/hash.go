@@ -106,8 +106,8 @@ func (u *Usage) Set(f Usage, v bool) {
 func NewHash() *Hash {
 	s := &Hash{}
 	// Recursively initializing a child structure:
-	//s.Digest = *cbnt.NewHashStructure()
-	s.Rehash()
+	// s.Digest = *cbnt.NewHashStructure()
+	// s.Rehash()
 	return s
 }
 
@@ -135,19 +135,19 @@ func (s *Hash) ReadFrom(r io.Reader) (int64, error) {
 // RehashRecursive calls Rehash (see below) recursively.
 func (s *Hash) RehashRecursive() {
 	s.Digest.Rehash()
-	s.Rehash()
+	// s.Rehash()
 }
 
-// Rehash sets values which are calculated automatically depending on the rest
-// data. It is usually about the total size field of an element.
-func (s *Hash) Rehash() {
-}
+// // Rehash sets values which are calculated automatically depending on the rest
+// // data. It is usually about the total size field of an element.
+// func (s *Hash) Rehash() {
+// }
 
 // WriteTo writes the Hash into 'w' in format defined in
 // the document #575623.
 func (s *Hash) WriteTo(w io.Writer) (int64, error) {
 	totalN := int64(0)
-	s.Rehash()
+	// s.Rehash()
 
 	// Usage (ManifestFieldType: endValue)
 	{
@@ -173,12 +173,14 @@ func (s *Hash) WriteTo(w io.Writer) (int64, error) {
 func (s *Hash) Layout() []cbnt.LayoutField {
 	return []cbnt.LayoutField{
 		{
+			ID:    0,
 			Name:  "Usage",
 			Size:  func() uint64 { return 8 },
 			Value: func() any { return &s.Usage },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
+			ID:    1,
 			Name:  "Digest",
 			Size:  func() uint64 { return s.Digest.Common.TotalSize(&s.Digest) },
 			Value: func() any { return &s.Digest },
@@ -187,24 +189,23 @@ func (s *Hash) Layout() []cbnt.LayoutField {
 	}
 }
 
-// UsageSize returns the size in bytes of the value of field Usage
-func (s *Hash) UsageTotalSize() uint64 {
-	return 8
+func (s *Hash) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		// normally it would be 0, but ret is already 0 if we land here
+		return ret, fmt.Errorf("Hash: %v", err)
+	}
+
+	return ret, nil
 }
 
-// DigestSize returns the size in bytes of the value of field Digest
-func (s *Hash) DigestTotalSize() uint64 {
-	return s.Digest.Common.TotalSize(&s.Digest)
-}
+func (s *Hash) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("Hash: %v", err)
+	}
 
-// UsageOffset returns the offset in bytes of field Usage
-func (s *Hash) UsageOffset() uint64 {
-	return s.Common.OffsetOf(s, "Usage")
-}
-
-// DigestOffset returns the offset in bytes of field Digest
-func (s *Hash) DigestOffset() uint64 {
-	return s.Common.OffsetOf(s, "Digest")
+	return ret, nil
 }
 
 // Size returns the total size of the Hash.
