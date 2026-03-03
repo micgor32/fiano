@@ -28,25 +28,35 @@ const (
 	// StructureIDTXT is the StructureID (in terms of
 	// the document #575623) of element 'TXT'.
 	StructureIDTXT = "__TXTS__"
+)
 
+const (
 	// <TO BE DOCUMENTED>
 	CachingTypeWriteProtect = CachingType(iota)
 	CachingTypeWriteBack
 	CachingTypeReserved0
 	CachingTypeReserved1
+)
 
+const (
 	ExecutionProfileA = ExecutionProfile(iota)
 	ExecutionProfileB
 	ExecutionProfileC
+)
 
+const (
 	MemoryScrubbingPolicyDefault = MemoryScrubbingPolicy(iota)
 	MemoryScrubbingPolicyBIOS
 	MemoryScrubbingPolicySACM
+)
 
+const (
 	BackupActionPolicyDefault = BackupActionPolicy(iota)
 	BackupActionPolicyForceMemoryPowerDown
 	BackupActionPolicyForceBtGUnbreakableShutdown
+)
 
+const (
 	ResetAUXControlResetAUXIndex = ResetAUXControl(iota)
 	ResetAUXControlDeleteAUXIndex
 )
