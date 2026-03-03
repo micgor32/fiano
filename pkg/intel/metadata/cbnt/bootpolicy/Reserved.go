@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
@@ -29,6 +28,43 @@ func NewReserved() *Reserved {
 func (s *Reserved) Validate() error {
 
 	return nil
+}
+
+func (s *Reserved) Layout() []cbnt.LayoutField {
+	return []cbnt.LayoutField{
+		{
+			ID:    0,
+			Name:  "Struct Info",
+			Size:  func() uint64 { return s.StructInfo.TotalSize() },
+			Value: func() any { return &s.StructInfo },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    1,
+			Name:  "Reserved Data",
+			Size:  func() uint64 { return 32 },
+			Value: func() any { return &s.ReservedData },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+	}
+}
+
+func (s *Reserved) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("Reserved: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *Reserved) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("Reserved: %v", err)
+	}
+
+	return ret, nil
 }
 
 // StructureIDReserved is the StructureID (in terms of
@@ -132,53 +168,16 @@ func (s *Reserved) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// StructInfoSize returns the size in bytes of the value of field StructInfo
-func (s *Reserved) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
-}
-
-// ReservedDataSize returns the size in bytes of the value of field ReservedData
-func (s *Reserved) ReservedDataTotalSize() uint64 {
-	return 32
-}
-
-// StructInfoOffset returns the offset in bytes of field StructInfo
-func (s *Reserved) StructInfoOffset() uint64 {
-	return 0
-}
-
-// ReservedDataOffset returns the offset in bytes of field ReservedData
-func (s *Reserved) ReservedDataOffset() uint64 {
-	return s.StructInfoOffset() + s.StructInfoTotalSize()
-}
-
 // Size returns the total size of the Reserved.
 func (s *Reserved) TotalSize() uint64 {
 	if s == nil {
 		return 0
 	}
 
-	var size uint64
-	size += s.StructInfoTotalSize()
-	size += s.ReservedDataTotalSize()
-	return size
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *Reserved) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "Reserved", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is structInfo
-	lines = append(lines, pretty.SubValue(depth+1, "Struct Info", "", &s.StructInfo, opts...)...)
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Reserved Data", "", &s.ReservedData, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return s.Common.PrettyString(depth, withHeader, s, "Reserved", opts...)
 }

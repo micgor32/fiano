@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
@@ -28,6 +27,66 @@ func NewPCD() *PCD {
 // values. It returns an error if so.
 func (s *PCD) Validate() error {
 	return nil
+}
+
+func (s *PCD) Layout() []cbnt.LayoutField {
+	return []cbnt.LayoutField{
+		{
+			ID:    0,
+			Name:  "Struct Info",
+			Size:  func() uint64 { return s.StructInfo.TotalSize() },
+			Value: func() any { return &s.StructInfo },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    1,
+			Name:  "Reserved 0",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.Reserved0 },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:    2,
+			Name:  "Size Of Data",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.SizeOfData },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:   3,
+			Name: "Data",
+			Size: func() uint64 {
+				size := uint64(len(s.Data))
+				if s.ElementSize != 0 {
+					base := s.StructInfo.TotalSize() + 2 + 2
+					if uint64(s.ElementSize) >= base {
+						size = uint64(s.ElementSize) - base
+					}
+				}
+				return size
+			},
+			Value: func() any { return &s.Data },
+			Type:  cbnt.ManifestFieldArrayDynamicWithSize,
+		},
+	}
+}
+
+func (s *PCD) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("PCD: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *PCD) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("PCD: %v", err)
+	}
+
+	return ret, nil
 }
 
 // GetStructInfo returns current value of StructInfo of the structure.
@@ -95,13 +154,15 @@ func (s *PCD) ReadDataFrom(r io.Reader) (int64, error) {
 		// FIXUP: The issue is that size is only the size of the first element. If Header Size + size != Total Size
 		// We have to manually calculate this
 		size = binary.LittleEndian.Uint16(s.SizeOfData[:])
-		guessedSize := s.StructInfoTotalSize()
-		guessedSize += s.Reserved0TotalSize()
+		infoSize, _ := s.SizeOf(0)
+		reservedSize, _ := s.SizeOf(1)
+		guessedSize := infoSize
+		guessedSize += reservedSize
 		guessedSize += 2
 		guessedSize += uint64(size)
 
 		if guessedSize != uint64(s.ElementSize) {
-			size = s.ElementSize - uint16(s.StructInfoTotalSize()) - 2 - 2 // 2 for Reserved0, 2 for Size Field
+			size = s.ElementSize - uint16(infoSize) - 2 - 2 // 2 for Reserved0, 2 for Size Field
 		}
 
 		totalN += int64(binary.Size(size))
@@ -171,38 +232,6 @@ func (s *PCD) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// StructInfoSize returns the size in bytes of the value of field StructInfo
-func (s *PCD) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
-}
-
-// Reserved0Size returns the size in bytes of the value of field Reserved0
-func (s *PCD) Reserved0TotalSize() uint64 {
-	return 2
-}
-
-// DataSize returns the size in bytes of the value of field Data
-func (s *PCD) DataTotalSize() uint64 {
-	size := uint64(binary.Size(uint16(0)))
-	size += uint64(len(s.Data))
-	return size
-}
-
-// StructInfoOffset returns the offset in bytes of field StructInfo
-func (s *PCD) StructInfoOffset() uint64 {
-	return 0
-}
-
-// Reserved0Offset returns the offset in bytes of field Reserved0
-func (s *PCD) Reserved0Offset() uint64 {
-	return s.StructInfoOffset() + s.StructInfoTotalSize()
-}
-
-// DataOffset returns the offset in bytes of field Data
-func (s *PCD) DataOffset() uint64 {
-	return s.Reserved0Offset() + s.Reserved0TotalSize()
-}
-
 // Size returns the total size of the PCD.
 func (s *PCD) TotalSize() uint64 {
 	if s == nil {
@@ -213,30 +242,10 @@ func (s *PCD) TotalSize() uint64 {
 		return uint64(s.ElementSize)
 	}
 
-	var size uint64
-	size += s.StructInfoTotalSize()
-	size += s.Reserved0TotalSize()
-	size += s.DataTotalSize()
-	return size
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *PCD) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "PCD", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is structInfo
-	lines = append(lines, pretty.SubValue(depth+1, "Struct Info", "", &s.StructInfo, opts...)...)
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Reserved 0", "", &s.Reserved0, opts...)...)
-	// ManifestFieldType is arrayDynamic
-	lines = append(lines, pretty.SubValue(depth+1, "Data", "", &s.Data, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return s.Common.PrettyString(depth, withHeader, s, "PCD", opts...)
 }

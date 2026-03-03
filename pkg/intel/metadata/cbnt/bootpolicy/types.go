@@ -12,6 +12,7 @@ type (
 	// TODO: handle as with km
 	// PrettyString: Boot Policy Manifest
 	Manifest struct {
+		cbnt.Common
 		// BPMH is the header of the boot policy manifest
 		//
 		// PrettyString: BPMH: Header
@@ -38,6 +39,7 @@ type (
 	}
 
 	Reserved struct {
+		cbnt.Common
 		StructInfo   `id:"__PFRS__" version:"0x21" var0:"0" var1:"uint16(s.TotalSize())"`
 		ReservedData [32]byte `json:"ReservedData"`
 	}
@@ -46,6 +48,7 @@ type (
 
 	// BPMH is the header of boot policy manifest
 	BPMH struct {
+		cbnt.Common
 		StructInfo `id:"__ACBP__" version:"0x23" var0:"0x20" var1:"uint16(s.TotalSize())"`
 
 		KeySignatureOffset uint16 `json:"bpmhKeySignatureOffset"`
@@ -69,6 +72,7 @@ type (
 
 	// PCD holds various Platform Config Data.
 	PCD struct {
+		cbnt.Common
 		StructInfo `id:"__PCDS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
 		Reserved0  [2]byte `json:"pcdReserved0,omitempty"`
 		SizeOfData [2]byte `json:"pcdSizeOfData,omitempty"`
@@ -76,6 +80,7 @@ type (
 	}
 
 	PM struct {
+		cbnt.Common
 		StructInfo `id:"__PMDA__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
 		Reserved0  [2]byte `require:"0" json:"pcReserved0,omitempty"`
 		Data       []byte  `json:"pcData"`
@@ -83,6 +88,7 @@ type (
 
 	// IBBSegment defines a single IBB segment
 	IBBSegment struct {
+		cbnt.Common
 		Reserved [2]byte `require:"0" json:"ibbSegReserved"`
 		Flags    uint16  `json:"ibbSegFlags"`
 		Base     uint32  `json:"ibbSegBase"`
@@ -99,6 +105,7 @@ type (
 	//
 	// PrettyString: IBB Segments Element
 	SE struct {
+		cbnt.Common
 		StructInfo `id:"__IBBS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
 		Reserved0  [1]byte   `require:"0" json:"seReserved0,omitempty"`
 		SetNumber  uint8     `require:"0" json:"seSetNumber,omitempty"`
@@ -147,12 +154,14 @@ type (
 	PBETValue uint8
 
 	Signature struct {
+		cbnt.Common
 		StructInfo        `id:"__PMSG__" version:"0x20" var0:"0" var1:"0"`
 		cbnt.KeySignature `json:"sigKeySignature"`
 	}
 
 	// TXT is the TXT element
 	TXT struct {
+		cbnt.Common
 		StructInfo      `id:"__TXTS__" version:"0x21" var0:"0" var1:"uint16(s.TotalSize())"`
 		Reserved0       [1]byte          `require:"0" json:"txtReserved0,omitempty"`
 		SetNumber       [1]byte          `require:"0" json:"txtSetNumer,omitempty"`

@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
@@ -35,6 +34,54 @@ func (s *PM) Validate() error {
 	}
 
 	return nil
+}
+
+func (s *PM) Layout() []cbnt.LayoutField {
+	return []cbnt.LayoutField{
+		{
+			ID:    0,
+			Name:  "Struct Info",
+			Size:  func() uint64 { return s.StructInfo.TotalSize() },
+			Value: func() any { return &s.StructInfo },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    1,
+			Name:  "Reserved 0",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.Reserved0 },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:   2,
+			Name: "Data",
+			Size: func() uint64 {
+				size := uint64(binary.Size(uint16(0)))
+				size += uint64(len(s.Data))
+				return size
+			},
+			Value: func() any { return &s.Data },
+			Type:  cbnt.ManifestFieldArrayDynamicWithPrefix,
+		},
+	}
+}
+
+func (s *PM) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("PM: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *PM) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("PM: %v", err)
+	}
+
+	return ret, nil
 }
 
 // GetStructInfo returns current value of StructInfo of the structure.
@@ -165,68 +212,16 @@ func (s *PM) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// StructInfoSize returns the size in bytes of the value of field StructInfo
-func (s *PM) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
-}
-
-// Reserved0Size returns the size in bytes of the value of field Reserved0
-func (s *PM) Reserved0TotalSize() uint64 {
-	return 2
-}
-
-// DataSize returns the size in bytes of the value of field Data
-func (s *PM) DataTotalSize() uint64 {
-	size := uint64(binary.Size(uint16(0)))
-	size += uint64(len(s.Data))
-	return size
-}
-
-// StructInfoOffset returns the offset in bytes of field StructInfo
-func (s *PM) StructInfoOffset() uint64 {
-	return 0
-}
-
-// Reserved0Offset returns the offset in bytes of field Reserved0
-func (s *PM) Reserved0Offset() uint64 {
-	return s.StructInfoOffset() + s.StructInfoTotalSize()
-}
-
-// DataOffset returns the offset in bytes of field Data
-func (s *PM) DataOffset() uint64 {
-	return s.Reserved0Offset() + s.Reserved0TotalSize()
-}
-
 // Size returns the total size of the PM.
 func (s *PM) TotalSize() uint64 {
 	if s == nil {
 		return 0
 	}
 
-	var size uint64
-	size += s.StructInfoTotalSize()
-	size += s.Reserved0TotalSize()
-	size += s.DataTotalSize()
-	return size
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *PM) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "PM", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is structInfo
-	lines = append(lines, pretty.SubValue(depth+1, "Struct Info", "", &s.StructInfo, opts...)...)
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Reserved 0", "", &s.Reserved0, opts...)...)
-	// ManifestFieldType is arrayDynamic
-	lines = append(lines, pretty.SubValue(depth+1, "Data", "", &s.Data, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return s.Common.PrettyString(depth, withHeader, s, "PM", opts...)
 }

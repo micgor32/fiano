@@ -107,6 +107,104 @@ func (_ Manifest) fieldNameByIndex(fieldIndex int) string {
 	return fmt.Sprintf("invalidFieldIndex_%d", fieldIndex)
 }
 
+func (s *Manifest) Layout() []cbnt.LayoutField {
+	return []cbnt.LayoutField{
+		{
+			ID:    0,
+			Name:  "BPMH: Header",
+			Size:  func() uint64 { return s.BPMH.TotalSize() },
+			Value: func() any { return &s.BPMH },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:   1,
+			Name: fmt.Sprintf("SE: Array of \"Boot Policy Manifest\" of length %d", len(s.SE)),
+			Size: func() uint64 {
+				var size uint64
+				for idx := range s.SE {
+					size += s.SE[idx].TotalSize()
+				}
+				return size
+			},
+			Value: func() any { return &s.SE },
+			Type:  cbnt.ManifestFieldList,
+		},
+		{
+			ID:   2,
+			Name: "TXTE",
+			Size: func() uint64 {
+				if s.TXTE == nil {
+					return 0
+				}
+				return s.TXTE.TotalSize()
+			},
+			Value: func() any { return s.TXTE },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:   3,
+			Name: "Res",
+			Size: func() uint64 {
+				if s.Res == nil {
+					return 0
+				}
+				return s.Res.TotalSize()
+			},
+			Value: func() any { return s.Res },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:   4,
+			Name: "PCDE: Platform Config Data",
+			Size: func() uint64 {
+				if s.PCDE == nil {
+					return 0
+				}
+				return s.PCDE.TotalSize()
+			},
+			Value: func() any { return s.PCDE },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:   5,
+			Name: "PME: Platform Manufacturer",
+			Size: func() uint64 {
+				if s.PME == nil {
+					return 0
+				}
+				return s.PME.TotalSize()
+			},
+			Value: func() any { return s.PME },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    6,
+			Name:  "PMSE: Signature",
+			Size:  func() uint64 { return s.PMSE.TotalSize() },
+			Value: func() any { return &s.PMSE },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+	}
+}
+
+func (s *Manifest) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("Manifest: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *Manifest) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("Manifest: %v", err)
+	}
+
+	return ret, nil
+}
+
 // ReadFrom reads the Manifest from 'r' in format defined in the document #575623.
 func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 	var missingFieldsByIndices = [7]bool{
@@ -323,95 +421,13 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// BPMHSize returns the size in bytes of the value of field BPMH
-func (s *Manifest) BPMHTotalSize() uint64 {
-	return s.BPMH.TotalSize()
-}
-
-// SESize returns the size in bytes of the value of field SE
-func (s *Manifest) SETotalSize() uint64 {
-	var size uint64
-	for idx := range s.SE {
-		size += s.SE[idx].TotalSize()
-	}
-	return size
-}
-
-// TXTESize returns the size in bytes of the value of field TXTE
-func (s *Manifest) TXTETotalSize() uint64 {
-	return s.TXTE.TotalSize()
-}
-
-// ResSize returns the size in bytes of the value of field Res
-func (s *Manifest) ResTotalSize() uint64 {
-	return s.Res.TotalSize()
-}
-
-// PCDESize returns the size in bytes of the value of field PCDE
-func (s *Manifest) PCDETotalSize() uint64 {
-	return s.PCDE.TotalSize()
-}
-
-// PMESize returns the size in bytes of the value of field PME
-func (s *Manifest) PMETotalSize() uint64 {
-	return s.PME.TotalSize()
-}
-
-// PMSESize returns the size in bytes of the value of field PMSE
-func (s *Manifest) PMSETotalSize() uint64 {
-	return s.PMSE.TotalSize()
-}
-
-// BPMHOffset returns the offset in bytes of field BPMH
-func (s *Manifest) BPMHOffset() uint64 {
-	return 0
-}
-
-// SEOffset returns the offset in bytes of field SE
-func (s *Manifest) SEOffset() uint64 {
-	return s.BPMHOffset() + s.BPMHTotalSize()
-}
-
-// TXTEOffset returns the offset in bytes of field TXTE
-func (s *Manifest) TXTEOffset() uint64 {
-	return s.SEOffset() + s.SETotalSize()
-}
-
-// ResOffset returns the offset in bytes of field Res
-func (s *Manifest) ResOffset() uint64 {
-	return s.TXTEOffset() + s.TXTETotalSize()
-}
-
-// PCDEOffset returns the offset in bytes of field PCDE
-func (s *Manifest) PCDEOffset() uint64 {
-	return s.ResOffset() + s.ResTotalSize()
-}
-
-// PMEOffset returns the offset in bytes of field PME
-func (s *Manifest) PMEOffset() uint64 {
-	return s.PCDEOffset() + s.PCDETotalSize()
-}
-
-// PMSEOffset returns the offset in bytes of field PMSE
-func (s *Manifest) PMSEOffset() uint64 {
-	return s.PMEOffset() + s.PMETotalSize()
-}
-
 // Size returns the total size of the Manifest.
 func (s *Manifest) TotalSize() uint64 {
 	if s == nil {
 		return 0
 	}
 
-	var size uint64
-	size += s.BPMHTotalSize()
-	size += s.SETotalSize()
-	size += s.TXTETotalSize()
-	size += s.ResTotalSize()
-	size += s.PCDETotalSize()
-	size += s.PMETotalSize()
-	size += s.PMSETotalSize()
-	return size
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
@@ -512,7 +528,9 @@ func calculateOffsetFromPhysAddr(physAddr uint64, imageSize uint64) uint64 {
 
 func (bpm *Manifest) rehashedBPMH() BPMH {
 	bpmh := bpm.BPMH
-	bpmh.KeySignatureOffset = uint16(bpm.PMSEOffset() + bpm.PMSE.KeySignatureOffset())
+	pmseOffs, _ := bpm.OffsetOf(6)
+	keySigOffs, _ := bpm.PMSE.OffsetOf(1)
+	bpmh.KeySignatureOffset = uint16(pmseOffs + keySigOffs)
 	return bpmh
 }
 

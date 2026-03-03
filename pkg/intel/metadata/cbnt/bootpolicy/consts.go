@@ -25,6 +25,10 @@ const (
 	// the document #575623) of element 'Signature'.
 	StructureIDSignature = "__PMSG__"
 
+	// StructureIDTXT is the StructureID (in terms of
+	// the document #575623) of element 'TXT'.
+	StructureIDTXT = "__TXTS__"
+
 	// <TO BE DOCUMENTED>
 	CachingTypeWriteProtect = CachingType(iota)
 	CachingTypeWriteBack

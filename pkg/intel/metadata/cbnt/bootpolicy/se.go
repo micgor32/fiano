@@ -38,6 +38,57 @@ func (s *IBBSegment) Validate() error {
 	return nil
 }
 
+func (s *IBBSegment) Layout() []cbnt.LayoutField {
+	return []cbnt.LayoutField{
+		{
+			ID:    0,
+			Name:  "Reserved",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.Reserved },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:    1,
+			Name:  "Flags",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.Flags },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    2,
+			Name:  "Base",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.Base },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    3,
+			Name:  "Size",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.Size },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+	}
+}
+
+func (s *IBBSegment) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("IBBSegment: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *IBBSegment) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("IBBSegment: %v", err)
+	}
+
+	return ret, nil
+}
+
 // ReadFrom reads the IBBSegment from 'r' in format defined in the document #575623.
 func (s *IBBSegment) ReadFrom(r io.Reader) (int64, error) {
 	totalN := int64(0)
@@ -182,35 +233,12 @@ func (s *IBBSegment) TotalSize() uint64 {
 		return 0
 	}
 
-	var size uint64
-	size += s.ReservedTotalSize()
-	size += s.FlagsTotalSize()
-	size += s.BaseTotalSize()
-	size += s.SizeTotalSize()
-	return size
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *IBBSegment) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "IBB Segment", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Reserved", "", &s.Reserved, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Flags", "", &s.Flags, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Base", "", &s.Base, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Size", "", &s.Size, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return s.Common.PrettyString(depth, withHeader, s, "IBB Segment", opts...)
 }
 
 // NewSE returns a new instance of SE with
@@ -282,6 +310,177 @@ func (s *SE) Validate() error {
 	}
 
 	return nil
+}
+
+func (s *SE) Layout() []cbnt.LayoutField {
+	return []cbnt.LayoutField{
+		{
+			ID:    0,
+			Name:  "Struct Info",
+			Size:  func() uint64 { return s.StructInfo.TotalSize() },
+			Value: func() any { return &s.StructInfo },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    1,
+			Name:  "Reserved 0",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.Reserved0 },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:    2,
+			Name:  "Set Number",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.SetNumber },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    3,
+			Name:  "Reserved 1",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.Reserved1 },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:    4,
+			Name:  "PBET Value",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.PBETValue },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    5,
+			Name:  "Flags",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.Flags },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    6,
+			Name:  "IBB MCHBAR",
+			Size:  func() uint64 { return 8 },
+			Value: func() any { return &s.IBBMCHBAR },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    7,
+			Name:  "VT-d BAR",
+			Size:  func() uint64 { return 8 },
+			Value: func() any { return &s.VTdBAR },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    8,
+			Name:  "DMA Protection 0 Base Address",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.DMAProtBase0 },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    9,
+			Name:  "DMA Protection 0 Limit Address",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.DMAProtLimit0 },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    10,
+			Name:  "DMA Protection 1 Base Address",
+			Size:  func() uint64 { return 8 },
+			Value: func() any { return &s.DMAProtBase1 },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    11,
+			Name:  "DMA Protection 2 Limit Address",
+			Size:  func() uint64 { return 8 },
+			Value: func() any { return &s.DMAProtLimit1 },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    12,
+			Name:  "Post IBB Hash",
+			Size:  func() uint64 { return s.PostIBBHash.TotalSize() },
+			Value: func() any { return &s.PostIBBHash },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    13,
+			Name:  "IBB Entry Point",
+			Size:  func() uint64 { return 4 },
+			Value: func() any { return &s.IBBEntryPoint },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    14,
+			Name:  "Digest List",
+			Size:  func() uint64 { return s.DigestList.TotalSize() },
+			Value: func() any { return &s.DigestList },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    15,
+			Name:  "OBB Hash",
+			Size:  func() uint64 { return s.OBBHash.TotalSize() },
+			Value: func() any { return &s.OBBHash },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    16,
+			Name:  "Reserved 2",
+			Size:  func() uint64 { return 3 },
+			Value: func() any { return &s.Reserved2 },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:   17,
+			Name: fmt.Sprintf("IBBSegments: Array of \"IBB Segments Element\" of length %d", len(s.IBBSegments)),
+			Size: func() uint64 {
+				size := uint64(binary.Size(uint8(0)))
+				for idx := range s.IBBSegments {
+					size += s.IBBSegments[idx].TotalSize()
+				}
+				return size
+			},
+			Value: func() any { return &s.IBBSegments },
+			Type:  cbnt.ManifestFieldList,
+			ReadList: func(r io.Reader) (int64, error) {
+				var count uint8
+				if err := binary.Read(r, binary.LittleEndian, &count); err != nil {
+					return 0, fmt.Errorf("unable to read the count for field 'IBBSegments': %w", err)
+				}
+				totalN := int64(binary.Size(count))
+				s.IBBSegments = make([]IBBSegment, count)
+				for idx := range s.IBBSegments {
+					n, err := s.IBBSegments[idx].ReadFrom(r)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to read field 'IBBSegments[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+				return totalN, nil
+			},
+		},
+	}
+}
+
+func (s *SE) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("SE: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *SE) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("SE: %v", err)
+	}
+
+	return ret, nil
 }
 
 // GetStructInfo returns current value of StructInfo of the structure.
@@ -881,82 +1080,20 @@ func (s *SE) TotalSize() uint64 {
 		return 0
 	}
 
-	var size uint64
-	size += s.StructInfoTotalSize()
-	size += s.Reserved0TotalSize()
-	size += s.SetNumberTotalSize()
-	size += s.Reserved1TotalSize()
-	size += s.PBETValueTotalSize()
-	size += s.FlagsTotalSize()
-	size += s.IBBMCHBARTotalSize()
-	size += s.VTdBARTotalSize()
-	size += s.DMAProtBase0TotalSize()
-	size += s.DMAProtLimit0TotalSize()
-	size += s.DMAProtBase1TotalSize()
-	size += s.DMAProtLimit1TotalSize()
-	size += s.PostIBBHashTotalSize()
-	size += s.IBBEntryPointTotalSize()
-	size += s.DigestListTotalSize()
-	size += s.OBBHashTotalSize()
-	size += s.Reserved2TotalSize()
-	size += s.IBBSegmentsTotalSize()
-	return size
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *SE) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	base := s.Common.PrettyString(depth, withHeader, s, "IBB Segments Element", opts...)
 	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "IBB Segments Element", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is structInfo
-	lines = append(lines, pretty.SubValue(depth+1, "Struct Info", "", &s.StructInfo, opts...)...)
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Reserved 0", "", &s.Reserved0, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Set Number", "", &s.SetNumber, opts...)...)
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Reserved 1", "", &s.Reserved1, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "PBET Value", "", &s.PBETValue, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Flags", "", &s.Flags, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "IBB MCHBAR", "", &s.IBBMCHBAR, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "VT-d BAR", "", &s.VTdBAR, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "DMA Protection 0 Base Address", "", &s.DMAProtBase0, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "DMA Protection 0 Limit Address", "", &s.DMAProtLimit0, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "DMA Protection 1 Base Address", "", &s.DMAProtBase1, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "DMA Protection 2 Limit Address", "", &s.DMAProtLimit1, opts...)...)
-	// ManifestFieldType is subStruct
-	lines = append(lines, pretty.SubValue(depth+1, "Post IBB Hash", "", &s.PostIBBHash, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "IBB Entry Point", "", &s.IBBEntryPoint, opts...)...)
-	// ManifestFieldType is subStruct
-	lines = append(lines, pretty.SubValue(depth+1, "Digest List", "", &s.DigestList, opts...)...)
-	// ManifestFieldType is subStruct
-	lines = append(lines, pretty.SubValue(depth+1, "OBB Hash", "", &s.OBBHash, opts...)...)
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Reserved 2", "", &s.Reserved2, opts...)...)
-	// ManifestFieldType is list
+	lines = append(lines, base)
+
 	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("IBBSegments: Array of \"IBB Segments Element\" of length %d", len(s.IBBSegments)), s.IBBSegments))
 	for i := 0; i < len(s.IBBSegments); i++ {
 		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.IBBSegments[i].PrettyString(depth+2, true)))
 	}
-	if depth < 1 {
-		lines = append(lines, "")
-	}
-	if depth < 2 {
-		lines = append(lines, "")
-	}
+
 	return strings.Join(lines, "\n")
 }
 

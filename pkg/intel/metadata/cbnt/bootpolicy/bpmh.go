@@ -37,12 +37,65 @@ func (s *BPMH) Layout() []cbnt.LayoutField {
 		},
 		{
 			ID:    1,
-			Name:  "Key Manifest Signature Offset",
+			Name:  "Key Signature Offset",
 			Size:  func() uint64 { return 2 },
-			Value: func() any { return &s.KeyManifestSignatureOffset },
+			Value: func() any { return &s.KeySignatureOffset },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    2,
+			Name:  "BPM Revision",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.BPMRevision },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    3,
+			Name:  "BPM SVN",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.BPMSVN },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    4,
+			Name:  "ACM SVN Auth",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.ACMSVNAuth },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    5,
+			Name:  "Reserved 0",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.Reserved0 },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:    6,
+			Name:  "NEM Data Stack",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.NEMDataStack },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 	}
+}
+
+func (s *BPMH) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("BPMH: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *BPMH) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("BPMH: %v", err)
+	}
+
+	return ret, nil
 }
 
 // Validate (recursively) checks the structure if there are any unexpected
@@ -245,120 +298,18 @@ func (s *BPMH) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// StructInfoSize returns the size in bytes of the value of field StructInfo
-func (s *BPMH) StructInfoTotalSize() uint64 {
-	return s.StructInfo.TotalSize()
-}
-
-// KeySignatureOffsetSize returns the size in bytes of the value of field KeySignatureOffset
-func (s *BPMH) KeySignatureOffsetTotalSize() uint64 {
-	return 2
-}
-
-// BPMRevisionSize returns the size in bytes of the value of field BPMRevision
-func (s *BPMH) BPMRevisionTotalSize() uint64 {
-	return 1
-}
-
-// BPMSVNSize returns the size in bytes of the value of field BPMSVN
-func (s *BPMH) BPMSVNTotalSize() uint64 {
-	return 1
-}
-
-// ACMSVNAuthSize returns the size in bytes of the value of field ACMSVNAuth
-func (s *BPMH) ACMSVNAuthTotalSize() uint64 {
-	return 1
-}
-
-// Reserved0Size returns the size in bytes of the value of field Reserved0
-func (s *BPMH) Reserved0TotalSize() uint64 {
-	return 1
-}
-
-// NEMDataStackSize returns the size in bytes of the value of field NEMDataStack
-func (s *BPMH) NEMDataStackTotalSize() uint64 {
-	return 2
-}
-
-// StructInfoOffset returns the offset in bytes of field StructInfo
-func (s *BPMH) StructInfoOffset() uint64 {
-	return 0
-}
-
-// KeySignatureOffsetOffset returns the offset in bytes of field KeySignatureOffset
-func (s *BPMH) KeySignatureOffsetOffset() uint64 {
-	return s.StructInfoOffset() + s.StructInfoTotalSize()
-}
-
-// BPMRevisionOffset returns the offset in bytes of field BPMRevision
-func (s *BPMH) BPMRevisionOffset() uint64 {
-	return s.KeySignatureOffsetOffset() + s.KeySignatureOffsetTotalSize()
-}
-
-// BPMSVNOffset returns the offset in bytes of field BPMSVN
-func (s *BPMH) BPMSVNOffset() uint64 {
-	return s.BPMRevisionOffset() + s.BPMRevisionTotalSize()
-}
-
-// ACMSVNAuthOffset returns the offset in bytes of field ACMSVNAuth
-func (s *BPMH) ACMSVNAuthOffset() uint64 {
-	return s.BPMSVNOffset() + s.BPMSVNTotalSize()
-}
-
-// Reserved0Offset returns the offset in bytes of field Reserved0
-func (s *BPMH) Reserved0Offset() uint64 {
-	return s.ACMSVNAuthOffset() + s.ACMSVNAuthTotalSize()
-}
-
-// NEMDataStackOffset returns the offset in bytes of field NEMDataStack
-func (s *BPMH) NEMDataStackOffset() uint64 {
-	return s.Reserved0Offset() + s.Reserved0TotalSize()
-}
-
 // Size returns the total size of the BPMH.
 func (s *BPMH) TotalSize() uint64 {
 	if s == nil {
 		return 0
 	}
 
-	var size uint64
-	size += s.StructInfoTotalSize()
-	size += s.KeySignatureOffsetTotalSize()
-	size += s.BPMRevisionTotalSize()
-	size += s.BPMSVNTotalSize()
-	size += s.ACMSVNAuthTotalSize()
-	size += s.Reserved0TotalSize()
-	size += s.NEMDataStackTotalSize()
-	return size
+	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *BPMH) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	var lines []string
-	if withHeader {
-		lines = append(lines, pretty.Header(depth, "BPMH", s))
-	}
-	if s == nil {
-		return strings.Join(lines, "\n")
-	}
-	// ManifestFieldType is structInfo
-	lines = append(lines, pretty.SubValue(depth+1, "Struct Info", "", &s.StructInfo, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "Key Signature Offset", "", &s.KeySignatureOffset, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "BPM Revision", "", &s.BPMRevision, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "BPM SVN", "", &s.BPMSVN, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "ACM SVN Auth", "", &s.ACMSVNAuth, opts...)...)
-	// ManifestFieldType is arrayStatic
-	lines = append(lines, pretty.SubValue(depth+1, "Reserved 0", "", &s.Reserved0, opts...)...)
-	// ManifestFieldType is endValue
-	lines = append(lines, pretty.SubValue(depth+1, "NEM Data Stack", "", &s.NEMDataStack, opts...)...)
-	if depth < 2 {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
+	return s.Common.PrettyString(depth, withHeader, s, "BPMH", opts...)
 }
 
 // InBytes returns the size in bytes.
