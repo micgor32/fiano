@@ -12,6 +12,13 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+// HashList describes multiple digests
+type HashList struct {
+	Common
+	Size uint16          `rehashValue:"TotalSize()" json:"hlSize"`
+	List []HashStructure `json:"hlList"`
+}
+
 // NewHashList returns a new instance of HashList with
 // all default values set.
 func NewHashList() *HashList {
@@ -170,6 +177,12 @@ func (s *HashList) PrettyString(depth uint, withHeader bool, opts ...pretty.Opti
 		return result + "\n"
 	}
 	return result
+}
+
+type HashStructure struct {
+	Common
+	HashAlg    Algorithm `default:"0x10" json:"hsAlg"`
+	HashBuffer []byte    `json:"hsBuffer"`
 }
 
 // NewHashStructure returns a new instance of HashStructure with

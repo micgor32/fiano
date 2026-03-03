@@ -17,6 +17,15 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+type Signature struct {
+	Common
+	SigScheme Algorithm `json:"sigScheme"`
+	Version   uint8     `require:"0x10" json:"sigVersion,omitempty"`
+	KeySize   BitSize   `json:"sigKeysize,omitempty"`
+	HashAlg   Algorithm `json:"sigHashAlg"`
+	Data      []byte    `countValue:"KeySize.InBytes()" prettyValue:"dataPrettyValue()" json:"sigData"`
+}
+
 // NewSignature returns a new instance of Signature with
 // all default values set.
 func NewSignature() *Signature {

@@ -13,6 +13,13 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+// TPMInfoList represents TPM capabilities supported by ACM
+type TPMInfoList struct {
+	Common
+	Capabilities TPMCapabilities
+	Algorithms   []Algorithm
+}
+
 // NewTPMInfoList returns a new instance of TPMInfoList with
 // all default values set.
 func NewTPMInfoList() *TPMInfoList {
@@ -154,6 +161,9 @@ func (s *TPMInfoList) PrettyString(depth uint, withHeader bool, opts ...pretty.O
 	return result
 }
 
+// TPM2PCRExtendPolicySupport defined TPM2 PCR Extend policy support.
+type TPM2PCRExtendPolicySupport uint8
+
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v TPM2PCRExtendPolicySupport) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	var lines []string
@@ -177,6 +187,9 @@ func (v TPM2PCRExtendPolicySupport) WriteTo(w io.Writer) (int64, error) {
 func (v TPM2PCRExtendPolicySupport) ReadFrom(r io.Reader) (int64, error) {
 	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
 }
+
+// TPMCapabilities defines TPM capabilities
+type TPMCapabilities uint32
 
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v TPMCapabilities) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
@@ -203,6 +216,9 @@ func (v TPMCapabilities) WriteTo(w io.Writer) (int64, error) {
 func (v TPMCapabilities) ReadFrom(r io.Reader) (int64, error) {
 	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
 }
+
+// TPMFamilySupport defines TPM family support
+type TPMFamilySupport uint8
 
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v TPMFamilySupport) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

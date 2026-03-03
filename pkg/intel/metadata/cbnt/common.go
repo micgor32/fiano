@@ -17,6 +17,17 @@ var (
 	endianess = binary.LittleEndian
 )
 
+type LayoutProvider interface {
+	Layout() []LayoutField
+}
+
+// Stateless engine, we use as "accessor" to offset and size
+// values per structure instead of dedicated methods.
+// TODO: mention in docs how to work with it since all the
+// <type>TotalSize etc. is gone now. It wasn't used that much
+// externally but anyways :D
+type Common struct{}
+
 func (Common) TotalSize(p LayoutProvider) uint64 {
 	var total uint64
 	for _, f := range p.Layout() {

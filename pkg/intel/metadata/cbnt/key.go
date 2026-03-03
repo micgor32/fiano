@@ -22,6 +22,14 @@ import (
 	"github.com/tjfoc/gmsm/sm2"
 )
 
+type Key struct {
+	Common
+	KeyAlg  Algorithm `json:"keyAlg"`
+	Version uint8     `require:"0x10"  json:"keyVersion"`
+	KeySize BitSize   `json:"keyBitsize"`
+	Data    []byte    `countValue:"keyDataSize()" json:"keyData"`
+}
+
 // keyDataSize returns the expected length of Data for specified
 // KeyAlg and KeySize.
 func (k Key) keyDataSize() int64 {
@@ -48,7 +56,7 @@ func (k Key) PubKey() (crypto.PublicKey, error) {
 	case AlgRSA:
 		result := &rsa.PublicKey{
 			N: new(big.Int).SetBytes(reverseBytes(k.Data[4:])),
-			E: int(BinaryOrder.Uint32(k.Data)),
+			E: int(endianess.Uint32(k.Data)),
 		}
 		return result, nil
 	case AlgECC:
@@ -84,7 +92,7 @@ func (k *Key) SetPubKey(key crypto.PublicKey) error {
 		n := key.N.Bytes()
 		k.KeySize.SetInBytes(uint16(len(n)))
 		k.Data = make([]byte, 4+len(n))
-		BinaryOrder.PutUint32(k.Data, uint32(key.E))
+		endianess.PutUint32(k.Data, uint32(key.E))
 		copy(k.Data[4:], reverseBytes(n))
 		return nil
 
@@ -352,6 +360,8 @@ func (s *Key) TotalSize() uint64 {
 func (s *Key) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return Common{}.PrettyString(depth, withHeader, s, "Key", opts...)
 }
+
+type BitSize uint16
 
 // InBits returns the size in bits.
 func (ks BitSize) InBits() uint16 {

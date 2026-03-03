@@ -10,9 +10,12 @@ import (
 	"io"
 )
 
-var BinaryOrder = binary.LittleEndian
-
-// Well, this can be improved, see comment in cbnt/types.go
+// FIXME: we could stick to having only 1.0 and 2.0, and treat
+// "2.1" as 2.0. After all the, in the "hacky" temp fix, the logic
+// of handling the header is the same (afaik Intel didn't changed
+// anything there), and we only have to treat headers from 21 to 25
+// as 20.
+type BootGuardVersion uint8
 
 func (bgv BootGuardVersion) String() string {
 	switch bgv {
@@ -28,7 +31,7 @@ func (bgv BootGuardVersion) String() string {
 
 func DetectBGV(r io.ReadSeeker) (BootGuardVersion, error) {
 	var s StructInfo
-	err := binary.Read(r, BinaryOrder, &s)
+	err := binary.Read(r, endianess, &s)
 	if err != nil {
 		return 0, fmt.Errorf("unable to read field 'ID': %w", err)
 	}

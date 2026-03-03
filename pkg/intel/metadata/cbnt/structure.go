@@ -12,6 +12,18 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+// StructureID is the magic ID string used to identify the structure type
+// in the manifest
+type StructureID [8]byte
+
+type StructInfo struct {
+	Common
+	ID          StructureID `json:"StructInfoID"`
+	Version     uint8       `json:"StructInfoVersion"`
+	Variable0   uint8       `json:"StructInfoVariable0"`
+	ElementSize uint16      `json:"StructInfoElementSize"`
+}
+
 // NewStructInfo returns a new instance of StructInfo with
 // all default values set.
 func NewStructInfo() *StructInfo {

@@ -13,6 +13,13 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+type KeySignature struct {
+	Common
+	Version   uint8     `require:"0x10" json:"ksVersion,omitempty"`
+	Key       Key       `json:"ksKey"`
+	Signature Signature `json:"ksSignature"`
+}
+
 // Verify verifies the builtin signature with the builtin public key.
 func (s *KeySignature) Verify(signedData []byte) error {
 	sig, err := s.Signature.SignatureData()

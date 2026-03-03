@@ -30,6 +30,8 @@ var hashInfo = []struct {
 	{AlgSM3, sm3.New},
 }
 
+type Algorithm uint16
+
 // IsNull returns true if a is AlgNull or zero (unset).
 func (a Algorithm) IsNull() bool {
 	return a == AlgNull || a == AlgUnknown
