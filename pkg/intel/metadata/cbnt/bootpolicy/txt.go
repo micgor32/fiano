@@ -14,6 +14,30 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+// TXT is the TXT element
+type TXT struct {
+	cbnt.Common
+	StructInfo      `id:"__TXTS__" version:"0x21" var0:"0" var1:"uint16(s.TotalSize())"`
+	Reserved0       [1]byte          `require:"0" json:"txtReserved0,omitempty"`
+	SetNumber       [1]byte          `require:"0" json:"txtSetNumer,omitempty"`
+	SInitMinSVNAuth uint8            `default:"0" json:"txtSVN"`
+	Reserved1       [1]byte          `require:"0" json:"txtReserved1,omitempty"`
+	ControlFlags    TXTControlFlags  `json:"txtFlags"`
+	PwrDownInterval Duration16In5Sec `json:"txtPwrDownInterval"`
+	// PrettyString: PTT CMOS Offset 0
+	PTTCMOSOffset0 uint8 `default:"126" json:"txtPTTCMOSOffset0"`
+	// PrettyString: PTT CMOS Offset 1
+	PTTCMOSOffset1 uint8   `default:"127" json:"txtPTTCMOSOffset1"`
+	ACPIBaseOffset uint16  `default:"0x400" json:"txtACPIBaseOffset,omitempty"`
+	Reserved2      [2]byte `json:"txtReserved2,omitempty"`
+	// PrettyString: ACPI MMIO Offset
+	PwrMBaseOffset uint32        `default:"0xFE000000" json:"txtPwrMBaseOffset,omitempty"`
+	DigestList     cbnt.HashList `json:"txtDigestList"`
+	Reserved3      [3]byte       `require:"0" json:"txtReserved3,omitempty"`
+
+	SegmentCount uint8 `require:"0" json:"txtSegmentCount,omitempty"`
+}
+
 // NewTXT returns a new instance of TXT with
 // all default values set.
 func NewTXT() *TXT {
@@ -536,6 +560,8 @@ func (s *TXT) TotalSize() uint64 {
 func (s *TXT) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return s.Common.PrettyString(depth, withHeader, s, "TXT", opts...)
 }
+
+type Duration16In5Sec uint16
 
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v Duration16In5Sec) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

@@ -16,6 +16,30 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+// BPMH is the header of boot policy manifest
+type BPMH struct {
+	cbnt.Common
+	StructInfo `id:"__ACBP__" version:"0x23" var0:"0x20" var1:"uint16(s.TotalSize())"`
+
+	KeySignatureOffset uint16 `json:"bpmhKeySignatureOffset"`
+
+	BPMRevision uint8 `json:"bpmhRevision"`
+
+	// BPMSVN is BPM security version number
+	//
+	// PrettyString: BPM SVN
+	BPMSVN cbnt.SVN `json:"bpmhSNV"`
+
+	// ACMSVNAuth is authorized ACM security version number
+	//
+	// PrettyString: ACM SVN Auth
+	ACMSVNAuth cbnt.SVN `json:"bpmhACMSVN"`
+
+	Reserved0 [1]byte `require:"0" json:"bpmhReserved0,omitempty"`
+
+	NEMDataStack Size4K `json:"bpmhNEMStackSize"`
+}
+
 // NewBPMH returns a new instance of BPMH with
 // all default values set.
 func NewBPMH() *BPMH {
@@ -248,6 +272,8 @@ func (s *BPMH) TotalSize() uint64 {
 func (s *BPMH) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return s.Common.PrettyString(depth, withHeader, s, "BPMH", opts...)
 }
+
+type Size4K uint16
 
 // InBytes returns the size in bytes.
 func (s Size4K) InBytes() uint32 {

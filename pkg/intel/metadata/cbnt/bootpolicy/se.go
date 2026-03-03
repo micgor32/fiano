@@ -17,6 +17,15 @@ import (
 	"time"
 )
 
+// IBBSegment defines a single IBB segment
+type IBBSegment struct {
+	cbnt.Common
+	Reserved [2]byte `require:"0" json:"ibbSegReserved"`
+	Flags    uint16  `json:"ibbSegFlags"`
+	Base     uint32  `json:"ibbSegBase"`
+	Size     uint32  `json:"ibbSegSize"`
+}
+
 // NewIBBSegment returns a new instance of IBBSegment with
 // all default values set.
 func NewIBBSegment() *IBBSegment {
@@ -201,6 +210,55 @@ func (s *IBBSegment) TotalSize() uint64 {
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *IBBSegment) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return s.Common.PrettyString(depth, withHeader, s, "IBB Segment", opts...)
+}
+
+// SE is an IBB segments element
+//
+// PrettyString: IBB Segments Element
+type SE struct {
+	cbnt.Common
+	StructInfo `id:"__IBBS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
+	Reserved0  [1]byte   `require:"0" json:"seReserved0,omitempty"`
+	SetNumber  uint8     `require:"0" json:"seSetNumber,omitempty"`
+	Reserved1  [1]byte   `require:"0" json:"seReserved1,omitempty"`
+	PBETValue  PBETValue `json:"sePBETValue"`
+	Flags      SEFlags   `json:"seFlags"`
+
+	// IBBMCHBAR <TO BE DOCUMENTED>
+	// PrettyString: IBB MCHBAR
+	IBBMCHBAR uint64 `json:"seIBBMCHBAR"`
+
+	// VTdBAR <TO BE DOCUMENTED>
+	// PrettyString: VT-d BAR
+	VTdBAR uint64 `json:"seVTdBAR"`
+
+	// DMAProtBase0 <TO BE DOCUMENTED>
+	// PrettyString: DMA Protection 0 Base Address
+	DMAProtBase0 uint32 `json:"seDMAProtBase0"`
+
+	// DMAProtLimit0 <TO BE DOCUMENTED>
+	// PrettyString: DMA Protection 0 Limit Address
+	DMAProtLimit0 uint32 `json:"seDMAProtLimit0"`
+
+	// DMAProtBase1 <TO BE DOCUMENTED>
+	// PrettyString: DMA Protection 1 Base Address
+	DMAProtBase1 uint64 `json:"seDMAProtBase1"`
+
+	// DMAProtLimit1 <TO BE DOCUMENTED>
+	// PrettyString: DMA Protection 2 Limit Address
+	DMAProtLimit1 uint64 `json:"seDMAProtLimit1"`
+
+	PostIBBHash cbnt.HashStructure `json:"sePostIBBHash"`
+
+	IBBEntryPoint uint32 `json:"seIBBEntry"`
+
+	DigestList cbnt.HashList `json:"seDigestList"`
+
+	OBBHash cbnt.HashStructure `json:"seOBBHash"`
+
+	Reserved2 [3]byte `require:"0" json:"seReserved2,omitempty"`
+
+	IBBSegments []IBBSegment `countType:"uint8" json:"seIBBSegments,omitempty"`
 }
 
 // NewSE returns a new instance of SE with
@@ -1045,6 +1103,9 @@ func (s *SE) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) st
 	return strings.Join(lines, "\n")
 }
 
+// CachingType <TO BE DOCUMENTED>
+type CachingType uint8
+
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v CachingType) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return v.String()
@@ -1064,6 +1125,9 @@ func (v CachingType) WriteTo(w io.Writer) (int64, error) {
 func (v CachingType) ReadFrom(r io.Reader) (int64, error) {
 	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
 }
+
+// PBETValue <TO BE DOCUMENTED>
+type PBETValue uint8
 
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v PBETValue) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
@@ -1089,6 +1153,9 @@ func (v PBETValue) WriteTo(w io.Writer) (int64, error) {
 func (v PBETValue) ReadFrom(r io.Reader) (int64, error) {
 	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
 }
+
+// SEFlags <TO BE DOCUMENTED>
+type SEFlags uint32
 
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v SEFlags) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

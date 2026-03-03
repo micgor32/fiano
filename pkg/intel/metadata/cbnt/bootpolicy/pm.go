@@ -13,6 +13,13 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+type PM struct {
+	cbnt.Common
+	StructInfo `id:"__PMDA__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
+	Reserved0  [2]byte `require:"0" json:"pcReserved0,omitempty"`
+	Data       []byte  `json:"pcData"`
+}
+
 // NewPM returns a new instance of PM with
 // all default values set.
 func NewPM() *PM {

@@ -13,6 +13,39 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+const (
+	// <TO BE DOCUMENTED>
+	CachingTypeWriteProtect = CachingType(iota)
+	CachingTypeWriteBack
+	CachingTypeReserved0
+	CachingTypeReserved1
+)
+
+const (
+	ExecutionProfileA = ExecutionProfile(iota)
+	ExecutionProfileB
+	ExecutionProfileC
+)
+
+const (
+	MemoryScrubbingPolicyDefault = MemoryScrubbingPolicy(iota)
+	MemoryScrubbingPolicyBIOS
+	MemoryScrubbingPolicySACM
+)
+
+const (
+	BackupActionPolicyDefault = BackupActionPolicy(iota)
+	BackupActionPolicyForceMemoryPowerDown
+	BackupActionPolicyForceBtGUnbreakableShutdown
+)
+
+const (
+	ResetAUXControlResetAUXIndex = ResetAUXControl(iota)
+	ResetAUXControlDeleteAUXIndex
+)
+
+type BackupActionPolicy uint8
+
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v BackupActionPolicy) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return v.String()
@@ -38,6 +71,8 @@ func (v ExecutionProfile) PrettyString(depth uint, withHeader bool, opts ...pret
 	return v.String()
 }
 
+type ExecutionProfile uint8
+
 // TotalSize returns the total size measured through binary.Size.
 func (v ExecutionProfile) TotalSize() uint64 {
 	return uint64(binary.Size(v))
@@ -52,6 +87,8 @@ func (v ExecutionProfile) WriteTo(w io.Writer) (int64, error) {
 func (v ExecutionProfile) ReadFrom(r io.Reader) (int64, error) {
 	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
 }
+
+type MemoryScrubbingPolicy uint8
 
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v MemoryScrubbingPolicy) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
@@ -73,6 +110,8 @@ func (v MemoryScrubbingPolicy) ReadFrom(r io.Reader) (int64, error) {
 	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
 }
 
+type ResetAUXControl uint8
+
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v ResetAUXControl) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return v.String()
@@ -92,6 +131,8 @@ func (v ResetAUXControl) WriteTo(w io.Writer) (int64, error) {
 func (v ResetAUXControl) ReadFrom(r io.Reader) (int64, error) {
 	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
 }
+
+type TXTControlFlags uint32
 
 // PrettyString returns the bits of the flags in an easy-to-read format.
 func (v TXTControlFlags) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {

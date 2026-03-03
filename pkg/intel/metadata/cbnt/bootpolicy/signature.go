@@ -12,6 +12,12 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+type Signature struct {
+	cbnt.Common
+	StructInfo        `id:"__PMSG__" version:"0x20" var0:"0" var1:"0"`
+	cbnt.KeySignature `json:"sigKeySignature"`
+}
+
 // NewSignature returns a new instance of Signature with
 // all default values set.
 func NewSignature() *Signature {

@@ -13,6 +13,15 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+// PCD holds various Platform Config Data.
+type PCD struct {
+	cbnt.Common
+	StructInfo `id:"__PCDS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
+	Reserved0  [2]byte `json:"pcdReserved0,omitempty"`
+	SizeOfData [2]byte `json:"pcdSizeOfData,omitempty"`
+	Data       []byte  `json:"pcdData"`
+}
+
 // NewPCD returns a new instance of PCD with
 // all default values set.
 func NewPCD() *PCD {

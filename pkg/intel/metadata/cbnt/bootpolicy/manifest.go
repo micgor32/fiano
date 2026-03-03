@@ -22,6 +22,36 @@ import (
 	"github.com/linuxboot/fiano/pkg/uefi"
 )
 
+// Manifest is a boot policy manifest
+// TODO: handle as with km
+// PrettyString: Boot Policy Manifest
+type Manifest struct {
+	cbnt.Common
+	// BPMH is the header of the boot policy manifest
+	//
+	// PrettyString: BPMH: Header
+	BPMH `rehashValue:"rehashedBPMH()" json:"bpmHeader"`
+
+	SE   []SE      `json:"bpmSE"`
+	TXTE *TXT      `json:"bpmTXTE,omitempty"`
+	Res  *Reserved `json:"bpmReserved,omitempty"`
+
+	// PCDE is the platform configuration data element
+	//
+	// PrettyString: PCDE: Platform Config Data
+	PCDE *PCD `json:"bpmPCDE,omitempty"`
+
+	// PME is the platform manufacturer element
+	//
+	// PrettyString: PME: Platform Manufacturer
+	PME *PM `json:"bpmPME,omitempty"`
+
+	// PMSE is the signature element
+	//
+	// PrettyString: PMSE: Signature
+	PMSE Signature `json:"bpmSignature"`
+}
+
 // NewManifest returns a new instance of Manifest with
 // all default values set.
 func NewManifest() *Manifest {
@@ -464,6 +494,9 @@ func (s *Manifest) PrettyString(depth uint, withHeader bool, opts ...pretty.Opti
 	}
 	return strings.Join(lines, "\n")
 }
+
+// StructInfo is the common header of any element.
+type StructInfo = cbnt.StructInfo
 
 // StructInfo is the information about how to parse the structure.
 func (bpm Manifest) StructInfo() StructInfo {

@@ -13,6 +13,12 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+type Reserved struct {
+	cbnt.Common
+	StructInfo   `id:"__PFRS__" version:"0x21" var0:"0" var1:"uint16(s.TotalSize())"`
+	ReservedData [32]byte `json:"ReservedData"`
+}
+
 // NewReserved returns a new instance of Reserved with
 // all default values set.
 func NewReserved() *Reserved {
