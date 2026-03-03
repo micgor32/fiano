@@ -127,90 +127,27 @@ func (s *BPMH) SetStructInfo(newStructInfo cbnt.StructInfo) {
 	s.StructInfo = newStructInfo
 }
 
-// ReadFrom reads the BPMH from 'r' in format defined in the document #575623.
-func (s *BPMH) ReadFrom(r io.Reader) (int64, error) {
-	var totalN int64
-
-	err := binary.Read(r, binary.LittleEndian, &s.StructInfo)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read structure info at %d: %w", totalN, err)
-	}
-	totalN += int64(binary.Size(s.StructInfo))
-
-	n, err := s.ReadDataFrom(r)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read data: %w", err)
-	}
-	totalN += n
-
-	return totalN, nil
+// Okay this might seem bit hacky: we use dummy type that just
+// implements LayoutProvider, and based on info value passes
+// either full BPMH Layout or BPMH Layout - StructInfo. Not ideal
+// but spares 60 lines of boilerplate code.
+type dummyLayout struct {
+	fields []cbnt.LayoutField
 }
 
-// ReadDataFrom reads the BPMH from 'r' excluding StructInfo,
-// in format defined in the document #575623.
-func (s *BPMH) ReadDataFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
+func (s dummyLayout) Layout() []cbnt.LayoutField {
+	return s.fields
+}
 
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		// ReadDataFrom does not read Struct, use ReadFrom for that.
+// ReadFrom reads the BPMH from 'r' in format defined in the document #575623.
+func (s *BPMH) ReadFrom(r io.Reader, info bool) (int64, error) {
+	l := s.Layout()
+
+	if !info {
+		l = l[1:]
 	}
 
-	// KeySignatureOffset (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.KeySignatureOffset)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KeySignatureOffset': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// BPMRevision (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.BPMRevision)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'BPMRevision': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// BPMSVN (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.BPMSVN)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'BPMSVN': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ACMSVNAuth (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.ACMSVNAuth)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'ACMSVNAuth': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// NEMDataStack (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.NEMDataStack)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'NEMDataStack': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, dummyLayout{fields: l})
 }
 
 // RehashRecursive calls Rehash (see below) recursively.

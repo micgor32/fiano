@@ -56,14 +56,18 @@ func (s *PCD) Layout() []cbnt.LayoutField {
 			ID:   3,
 			Name: "Data",
 			Size: func() uint64 {
-				size := uint64(len(s.Data))
+				size := binary.LittleEndian.Uint16(s.SizeOfData[:])
+				if size == 0 && len(s.Data) != 0 {
+					size = uint16(len(s.Data))
+				}
 				if s.ElementSize != 0 {
 					base := s.StructInfo.TotalSize() + 2 + 2
-					if uint64(s.ElementSize) >= base {
-						size = uint64(s.ElementSize) - base
+					guessedSize := base + uint64(size)
+					if guessedSize != uint64(s.ElementSize) {
+						size = s.ElementSize - uint16(s.StructInfo.TotalSize()) - 2 - 2
 					}
 				}
-				return size
+				return uint64(size)
 			},
 			Value: func() any { return &s.Data },
 			Type:  cbnt.ManifestFieldArrayDynamicWithSize,
@@ -107,21 +111,7 @@ func (s *PCD) SetStructInfo(newStructInfo cbnt.StructInfo) {
 
 // ReadFrom reads the PCD from 'r' in format defined in the document #575623.
 func (s *PCD) ReadFrom(r io.Reader) (int64, error) {
-	var totalN int64
-
-	err := binary.Read(r, binary.LittleEndian, &s.StructInfo)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read structure info at %d: %w", totalN, err)
-	}
-	totalN += int64(binary.Size(s.StructInfo))
-
-	n, err := s.ReadDataFrom(r)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read data: %w", err)
-	}
-	totalN += n
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, s)
 }
 
 // ReadDataFrom reads the PCD from 'r' excluding StructInfo,

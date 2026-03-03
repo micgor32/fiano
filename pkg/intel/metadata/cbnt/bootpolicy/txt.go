@@ -223,21 +223,7 @@ func (s *TXT) SetStructInfo(newStructInfo cbnt.StructInfo) {
 
 // ReadFrom reads the TXT from 'r' in format defined in the document #575623.
 func (s *TXT) ReadFrom(r io.Reader) (int64, error) {
-	var totalN int64
-
-	err := binary.Read(r, binary.LittleEndian, &s.StructInfo)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read structure info at %d: %w", totalN, err)
-	}
-	totalN += int64(binary.Size(s.StructInfo))
-
-	n, err := s.ReadDataFrom(r)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read data: %w", err)
-	}
-	totalN += n
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, s)
 }
 
 // ReadDataFrom reads the TXT from 'r' excluding StructInfo,

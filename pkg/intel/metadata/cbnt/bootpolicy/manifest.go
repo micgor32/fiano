@@ -253,7 +253,7 @@ func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 				return totalN, fmt.Errorf("field 'BPMH' is not a slice, but multiple elements found")
 			}
 			s.BPMH.SetStructInfo(structInfo)
-			n, err = s.BPMH.ReadDataFrom(r)
+			n, err = s.BPMH.ReadFrom(r, false)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field BPMH at %d: %w", totalN, err)
 			}
