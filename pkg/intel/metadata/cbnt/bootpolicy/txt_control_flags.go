@@ -1,28 +1,134 @@
-// Copyright 2017-2021 the LinuxBoot Authors. All rights reserved
+// Copyright 2017-2026 the LinuxBoot Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
-//go:generate manifestcodegen
 
 package cbntbootpolicy
 
 import (
+	"encoding/binary"
 	"fmt"
+	"io"
+	"strings"
+
+	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
-type TXTControlFlags uint32
+// PrettyString returns the bits of the flags in an easy-to-read format.
+func (v BackupActionPolicy) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	return v.String()
+}
+
+// TotalSize returns the total size measured through binary.Size.
+func (v BackupActionPolicy) TotalSize() uint64 {
+	return uint64(binary.Size(v))
+}
+
+// WriteTo writes the BackupActionPolicy into 'w' in binary format.
+func (v BackupActionPolicy) WriteTo(w io.Writer) (int64, error) {
+	return int64(v.TotalSize()), binary.Write(w, binary.LittleEndian, v)
+}
+
+// ReadFrom reads the BackupActionPolicy from 'r' in binary format.
+func (v BackupActionPolicy) ReadFrom(r io.Reader) (int64, error) {
+	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
+}
+
+// PrettyString returns the bits of the flags in an easy-to-read format.
+func (v ExecutionProfile) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	return v.String()
+}
+
+// TotalSize returns the total size measured through binary.Size.
+func (v ExecutionProfile) TotalSize() uint64 {
+	return uint64(binary.Size(v))
+}
+
+// WriteTo writes the ExecutionProfile into 'w' in binary format.
+func (v ExecutionProfile) WriteTo(w io.Writer) (int64, error) {
+	return int64(v.TotalSize()), binary.Write(w, binary.LittleEndian, v)
+}
+
+// ReadFrom reads the ExecutionProfile from 'r' in binary format.
+func (v ExecutionProfile) ReadFrom(r io.Reader) (int64, error) {
+	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
+}
+
+// PrettyString returns the bits of the flags in an easy-to-read format.
+func (v MemoryScrubbingPolicy) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	return v.String()
+}
+
+// TotalSize returns the total size measured through binary.Size.
+func (v MemoryScrubbingPolicy) TotalSize() uint64 {
+	return uint64(binary.Size(v))
+}
+
+// WriteTo writes the MemoryScrubbingPolicy into 'w' in binary format.
+func (v MemoryScrubbingPolicy) WriteTo(w io.Writer) (int64, error) {
+	return int64(v.TotalSize()), binary.Write(w, binary.LittleEndian, v)
+}
+
+// ReadFrom reads the MemoryScrubbingPolicy from 'r' in binary format.
+func (v MemoryScrubbingPolicy) ReadFrom(r io.Reader) (int64, error) {
+	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
+}
+
+// PrettyString returns the bits of the flags in an easy-to-read format.
+func (v ResetAUXControl) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	return v.String()
+}
+
+// TotalSize returns the total size measured through binary.Size.
+func (v ResetAUXControl) TotalSize() uint64 {
+	return uint64(binary.Size(v))
+}
+
+// WriteTo writes the ResetAUXControl into 'w' in binary format.
+func (v ResetAUXControl) WriteTo(w io.Writer) (int64, error) {
+	return int64(v.TotalSize()), binary.Write(w, binary.LittleEndian, v)
+}
+
+// ReadFrom reads the ResetAUXControl from 'r' in binary format.
+func (v ResetAUXControl) ReadFrom(r io.Reader) (int64, error) {
+	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
+}
+
+// PrettyString returns the bits of the flags in an easy-to-read format.
+func (v TXTControlFlags) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	var lines []string
+	if withHeader {
+		lines = append(lines, pretty.Header(depth, "TXT Control Flags", v))
+	}
+	lines = append(lines, pretty.SubValue(depth+1, "Execution Profile", "", v.ExecutionProfile(), opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Memory Scrubbing Policy", "", v.MemoryScrubbingPolicy(), opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Backup Action Policy", "", v.BackupActionPolicy(), opts...)...)
+	if v.IsSACMRequestedToExtendStaticPCRs() {
+		lines = append(lines, pretty.SubValue(depth+1, "Is SACM Requested To Extend Static PC Rs", "Default setting. S-ACM is requested to extend static PCRs", true, opts...)...)
+	} else {
+		lines = append(lines, pretty.SubValue(depth+1, "Is SACM Requested To Extend Static PC Rs", "S-ACM is not requested to extend static PCRs", false, opts...)...)
+	}
+	lines = append(lines, pretty.SubValue(depth+1, "Reset AUX Control", "", v.ResetAUXControl(), opts...)...)
+	return strings.Join(lines, "\n")
+}
+
+// TotalSize returns the total size measured through binary.Size.
+func (v TXTControlFlags) TotalSize() uint64 {
+	return uint64(binary.Size(v))
+}
+
+// WriteTo writes the TXTControlFlags into 'w' in binary format.
+func (v TXTControlFlags) WriteTo(w io.Writer) (int64, error) {
+	return int64(v.TotalSize()), binary.Write(w, binary.LittleEndian, v)
+}
+
+// ReadFrom reads the TXTControlFlags from 'r' in binary format.
+func (v TXTControlFlags) ReadFrom(r io.Reader) (int64, error) {
+	return int64(v.TotalSize()), binary.Read(r, binary.LittleEndian, v)
+}
 
 func (flags TXTControlFlags) ExecutionProfile() ExecutionProfile {
 	return ExecutionProfile(flags & 0x1f)
 }
-
-type ExecutionProfile uint8
-
-const (
-	ExecutionProfileA = ExecutionProfile(iota)
-	ExecutionProfileB
-	ExecutionProfileC
-)
 
 // String just implements fmt.Stringer.
 func (p ExecutionProfile) String() string {
@@ -41,14 +147,6 @@ func (flags TXTControlFlags) MemoryScrubbingPolicy() MemoryScrubbingPolicy {
 	return MemoryScrubbingPolicy((flags >> 5) & 0x3)
 }
 
-type MemoryScrubbingPolicy uint8
-
-const (
-	MemoryScrubbingPolicyDefault = MemoryScrubbingPolicy(iota)
-	MemoryScrubbingPolicyBIOS
-	MemoryScrubbingPolicySACM
-)
-
 // String implements fmt.Stringer.
 func (policy MemoryScrubbingPolicy) String() string {
 	switch policy {
@@ -65,14 +163,6 @@ func (policy MemoryScrubbingPolicy) String() string {
 func (flags TXTControlFlags) BackupActionPolicy() BackupActionPolicy {
 	return BackupActionPolicy((flags >> 7) & 0x3)
 }
-
-type BackupActionPolicy uint8
-
-const (
-	BackupActionPolicyDefault = BackupActionPolicy(iota)
-	BackupActionPolicyForceMemoryPowerDown
-	BackupActionPolicyForceBtGUnbreakableShutdown
-)
 
 // String implements fmt.Stringer.
 func (policy BackupActionPolicy) String() string {
@@ -96,13 +186,6 @@ func (flags TXTControlFlags) IsSACMRequestedToExtendStaticPCRs() bool {
 func (flags TXTControlFlags) ResetAUXControl() ResetAUXControl {
 	return ResetAUXControl((flags >> 31) & 0x01)
 }
-
-type ResetAUXControl uint8
-
-const (
-	ResetAUXControlResetAUXIndex = ResetAUXControl(iota)
-	ResetAUXControlDeleteAUXIndex
-)
 
 // String implements fmt.Stringer.
 func (c ResetAUXControl) String() string {
