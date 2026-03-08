@@ -30,7 +30,11 @@ func (bgv BootGuardVersion) String() string {
 }
 
 func DetectBGV(r io.ReadSeeker) (BootGuardVersion, error) {
-	var s StructInfo
+	// We could take StructInfoBG here as well since version
+	// is under the saem offset, so it does not really matter.
+	// Plus we just have it here for version detection, so it won't
+	// hurt even if read version is actually 0x10.
+	var s StructInfoCBNT
 	err := binary.Read(r, endianess, &s)
 	if err != nil {
 		return 0, fmt.Errorf("unable to read field 'ID': %w", err)
@@ -40,20 +44,15 @@ func DetectBGV(r io.ReadSeeker) (BootGuardVersion, error) {
 		return 0, err
 	}
 
+	// TODO: remove later, just for debugging
 	fmt.Printf("raw version 0x%x\n", s.Version)
 
 	switch s.Version {
 	case 0x10:
 		return Version10, nil
-	case 0x20:
-		fallthrough
-	case 0x21:
+	case 0x20, 0x21:
 		return Version20, nil
-	case 0x22:
-		fallthrough
-	case 0x23:
-		fallthrough
-	case 0x25:
+	case 0x22, 0x23, 0x24, 0x25:
 		return Version21, nil
 	default:
 		return 0, fmt.Errorf("couldn't detect version 0x%x", s.Version)
