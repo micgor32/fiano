@@ -230,3 +230,39 @@ func readSubStruct(r io.Reader, out io.ReaderFrom) (int64, error) {
 	}
 	return n, nil
 }
+
+// Okay this might seem bit hacky: we use dummy type that just
+// implements LayoutProvider, and based on info value passes
+// either full <type> Layout or <type> Layout - StructInfo. Not ideal
+// but spares lines of boilerplate code per type.
+type DummyLayout struct {
+	Fields []LayoutField
+}
+
+func (s DummyLayout) Layout() []LayoutField {
+	return s.Fields
+}
+
+type StructInfo interface {
+	ReadFrom(r io.Reader) (int64, error)
+	WriteTo(r io.Writer) (int64, error)
+	Layout() []LayoutField
+	SizeOf(id int) (uint64, error)
+	OffsetOf(id int) (uint64, error)
+	TotalSize() uint64
+	PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string
+	StructInfo() StructInfo
+}
+
+func NewStructInfo(bgv BootGuardVersion) StructInfo {
+	switch bgv {
+	case Version10:
+		s := &StructInfoBG{}
+		return s
+	case Version20, Version21:
+		s := &StructInfoCBNT{}
+		return s
+	default:
+		return nil
+	}
+}
