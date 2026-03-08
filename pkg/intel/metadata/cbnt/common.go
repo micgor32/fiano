@@ -89,44 +89,50 @@ func (Common) ReadFrom(r io.Reader, p LayoutProvider) (int64, error) {
 	for _, f := range p.Layout() {
 		switch f.Type {
 		case ManifestFieldEndValue:
-			totalN, err := readStatic(r, f.Size(), f.Value())
+			n, err := readStatic(r, f.Size(), f.Value())
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
 			}
+			totalN += n
 		case ManifestFieldArrayDynamicWithSize:
 			size := uint16(f.Size())
-			totalN, err := readArrayDynamic(r, &size, f.Value())
+			n, err := readArrayDynamic(r, &size, f.Value())
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
 			}
+			totalN += n
 		case ManifestFieldArrayDynamicWithPrefix:
-			totalN, err := readArrayDynamic(r, nil, f.Value())
+			n, err := readArrayDynamic(r, nil, f.Value())
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
 			}
+			totalN += n
 		case ManifestFieldList:
 			if f.ReadList == nil {
 				return totalN, fmt.Errorf("field '%s' has no list reader", f.Name)
 			}
-			totalN, err := f.ReadList(r)
+			n, err := f.ReadList(r)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
 			}
+			totalN += n
 		case ManifestFieldArrayStatic:
-			totalN, err := readStatic(r, f.Size(), f.Value())
+			n, err := readStatic(r, f.Size(), f.Value())
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
 			}
+			totalN += n
 		case ManifestFieldSubStruct:
 			fieldValue := f.Value()
 			sub, ok := fieldValue.(io.ReaderFrom)
 			if !ok {
 				return totalN, fmt.Errorf("field '%s' does not implement io.ReaderFrom", f.Name)
 			}
-			totalN, err := readSubStruct(r, sub)
+			n, err := readSubStruct(r, sub)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
 			}
+			totalN += n
 		}
 	}
 
