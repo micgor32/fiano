@@ -12,20 +12,14 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
-// StructureID is the magic ID string used to identify the structure type
-// in the manifest
-type StructureID [8]byte
-
-type StructInfoCBNT struct {
+type StructInfoBG struct {
 	Common
-	ID          StructureID `json:"StructInfoID"`
-	Version     uint8       `json:"StructInfoVersion"`
-	Variable0   uint8       `json:"StructInfoVariable0,omitempty"`
-	ElementSize uint16      `json:"StructInfoElementSize,omitempty"`
+	ID      StructureID `json:"StructInfoID"`
+	Version uint8       `json:"StructInfoVersion"`
 }
 
 // ReadFrom reads the StructInfo from 'r' in format defined in the document #575623.
-func (s StructInfoCBNT) ReadFrom(r io.Reader) (int64, error) {
+func (s StructInfoBG) ReadFrom(r io.Reader) (int64, error) {
 	totalN, err := s.Common.ReadFrom(r, s)
 	if err != nil {
 		return 0, err
@@ -36,7 +30,7 @@ func (s StructInfoCBNT) ReadFrom(r io.Reader) (int64, error) {
 
 // WriteTo writes the StructInfo into 'w' in format defined in
 // the document #575623.
-func (s StructInfoCBNT) WriteTo(w io.Writer) (int64, error) {
+func (s StructInfoBG) WriteTo(w io.Writer) (int64, error) {
 	totalN := int64(0)
 
 	// ID (ManifestFieldType: arrayStatic)
@@ -57,28 +51,10 @@ func (s StructInfoCBNT) WriteTo(w io.Writer) (int64, error) {
 		totalN += int64(n)
 	}
 
-	// Variable0 (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.Variable0)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Variable0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ElementSize (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.ElementSize)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'ElementSize': %w", err)
-		}
-		totalN += int64(n)
-	}
-
 	return totalN, nil
 }
 
-func (s StructInfoCBNT) Layout() []LayoutField {
+func (s StructInfoBG) Layout() []LayoutField {
 	return []LayoutField{
 		{
 			ID:    0,
@@ -94,24 +70,10 @@ func (s StructInfoCBNT) Layout() []LayoutField {
 			Value: func() any { return &s.Version },
 			Type:  ManifestFieldEndValue,
 		},
-		{
-			ID:    2,
-			Name:  "Variable 0",
-			Size:  func() uint64 { return 1 },
-			Value: func() any { return &s.Variable0 },
-			Type:  ManifestFieldEndValue,
-		},
-		{
-			ID:    3,
-			Name:  "Element Size",
-			Size:  func() uint64 { return 2 },
-			Value: func() any { return &s.ElementSize },
-			Type:  ManifestFieldEndValue,
-		},
 	}
 }
 
-func (s StructInfoCBNT) SizeOf(id int) (uint64, error) {
+func (s StructInfoBG) SizeOf(id int) (uint64, error) {
 	ret, err := s.Common.SizeOf(s, id)
 	if err != nil {
 		return ret, fmt.Errorf("HashList: %v", err)
@@ -120,7 +82,7 @@ func (s StructInfoCBNT) SizeOf(id int) (uint64, error) {
 	return ret, nil
 }
 
-func (s StructInfoCBNT) OffsetOf(id int) (uint64, error) {
+func (s StructInfoBG) OffsetOf(id int) (uint64, error) {
 	ret, err := s.Common.OffsetOf(s, id)
 	if err != nil {
 		return ret, fmt.Errorf("HashList: %v", err)
@@ -130,22 +92,17 @@ func (s StructInfoCBNT) OffsetOf(id int) (uint64, error) {
 }
 
 // Size returns the total size of the StructInfo.
-func (s StructInfoCBNT) TotalSize() uint64 {
+func (s StructInfoBG) TotalSize() uint64 {
 	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
-func (s StructInfoCBNT) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+func (s StructInfoBG) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return Common{}.PrettyString(depth, withHeader, s, "Struct Info", opts...)
 }
 
 // StructInfo just returns StructInfo, it is a handy method if StructInfo
 // is included anonymously to another type.
-func (s StructInfoCBNT) StructInfo() StructInfo {
+func (s StructInfoBG) StructInfo() StructInfo {
 	return s
-}
-
-// String returns the ID as a string.
-func (s StructureID) String() string {
-	return string(s[:])
 }
