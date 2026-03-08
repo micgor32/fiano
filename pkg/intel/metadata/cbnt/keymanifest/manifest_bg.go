@@ -17,12 +17,12 @@ import (
 
 type BGManifest struct {
 	cbnt.Common
-	cbnt.StructInfo `id:"__KEYM__" version:"0x10"`
-	KMVersion       uint8              `json:"kmVersion"`
-	KMSVN           cbnt.SVN           `json:"kmSVN"`
-	KMID            uint8              `json:"kmID"`
-	BPKey           cbnt.HashStructure `json:"kmBPKey"`
-	KeyAndSignature cbnt.KeySignature  `json:"kmKeySignature"`
+	cbnt.StructInfoBG `id:"__KEYM__" version:"0x10"`
+	KMVersion         uint8              `json:"kmVersion"`
+	KMSVN             cbnt.SVN           `json:"kmSVN"`
+	KMID              uint8              `json:"kmID"`
+	BPKey             cbnt.HashStructure `json:"kmBPKey"`
+	KeyAndSignature   cbnt.KeySignature  `json:"kmKeySignature"`
 }
 
 func (m *BGManifest) SetSignature(
@@ -91,7 +91,7 @@ const StructureIDManifest = "__KEYM__"
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
 func (s *BGManifest) GetStructInfo() cbnt.StructInfo {
-	return s.StructInfo
+	return s.StructInfoBG
 }
 
 // SetStructInfo sets new value of StructInfo to the structure.
@@ -99,108 +99,28 @@ func (s *BGManifest) GetStructInfo() cbnt.StructInfo {
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
 func (s *BGManifest) SetStructInfo(newStructInfo cbnt.StructInfo) {
-	s.StructInfo = newStructInfo
+	s.StructInfoBG = newStructInfo.(cbnt.StructInfoBG)
 }
 
 // ReadFrom reads the Manifest from 'r' in format defined in the document #575623.
 func (s *BGManifest) ReadFrom(r io.Reader) (int64, error) {
-	var totalN int64
-
-	err := binary.Read(r, binary.LittleEndian, &s.StructInfo)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read structure info at %d: %w", totalN, err)
-	}
-	totalN += int64(binary.Size(s.StructInfo))
-
-	n, err := s.ReadDataFrom(r)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read data: %w", err)
-	}
-	totalN += n
-
-	return totalN, nil
-}
-
-// ReadDataFrom reads the Manifest from 'r' excluding StructInfo,
-// in format defined in the document #575623.
-func (s *BGManifest) ReadDataFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		// ReadDataFrom does not read Struct, use ReadFrom for that.
-	}
-
-	// KMVersion (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.KMVersion)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KMVersion': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KMSVN (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.KMSVN)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KMSVN': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KMID (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.KMID)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KMID': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// BPKey (ManifestFieldType: subStruct)
-	{
-		n, err := s.BPKey.ReadFrom(r)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'BPKey': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KeyAndSignature (ManifestFieldType: subStruct)
-	{
-		n, err := s.KeyAndSignature.ReadFrom(r)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KeyAndSignature': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, s)
 }
 
 // RehashRecursive calls Rehash (see below) recursively.
 func (s *BGManifest) RehashRecursive() {
-	s.StructInfo.Rehash()
 	s.BPKey.Rehash()
 	s.KeyAndSignature.Rehash()
-	s.Rehash()
-}
-
-// Rehash sets values which are calculated automatically depending on the rest
-// data. It is usually about the total size field of an element.
-func (s *BGManifest) Rehash() {
 }
 
 // WriteTo writes the Manifest into 'w' in format defined in
 // the document #575623.
 func (s *BGManifest) WriteTo(w io.Writer) (int64, error) {
 	totalN := int64(0)
-	s.Rehash()
 
 	// StructInfo (ManifestFieldType: structInfo)
 	{
-		n, err := s.StructInfo.WriteTo(w)
+		n, err := s.StructInfoBG.WriteTo(w)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
 		}
@@ -260,8 +180,8 @@ func (s *BGManifest) Layout() []cbnt.LayoutField {
 		{
 			ID:    0,
 			Name:  "Struct Info",
-			Size:  func() uint64 { return s.StructInfo.TotalSize() },
-			Value: func() any { return &s.StructInfo },
+			Size:  func() uint64 { return s.StructInfoBG.TotalSize() },
+			Value: func() any { return s.StructInfoBG },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{

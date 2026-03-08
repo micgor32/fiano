@@ -19,7 +19,7 @@ import (
 // PrettyString: CBnT Key Manifest
 type CBnTManifest struct {
 	cbnt.Common
-	cbnt.StructInfo `id:"__KEYM__" version:"0x21" var0:"0" var1:"0"`
+	cbnt.StructInfoCBNT `id:"__KEYM__" version:"0x21" var0:"0" var1:"0"`
 
 	// KeyManifestSignatureOffset is Key Manifest KeySignature offset.
 	//
@@ -106,21 +106,13 @@ func (m *CBnTManifest) ValidateBPMKey(bpmKS cbnt.KeySignature) error {
 }
 
 func (s *CBnTManifest) Validate() error {
-	switch s.StructInfo.Version {
-	case 0x10:
-		// if err := s.BGKM.BPKey.Validate(); err != nil {
-		// 	return fmt.Errorf("error on field 'BPKey': %w", err)
-		// }
-	case 0x21:
-		// See tag "rehashValue"
-		v, err := s.OffsetOf(9)
-		if err != nil {
-			// see below
-		}
-		expectedValue := uint16(v)
-		if s.KeyManifestSignatureOffset != expectedValue {
-			return fmt.Errorf("field 'KeyManifestSignatureOffset' expects write-value '%v', but has %v", expectedValue, s.KeyManifestSignatureOffset)
-		}
+	v, err := s.OffsetOf(9)
+	if err != nil {
+		return fmt.Errorf("error on field 'KeyAndSignature': %w", err)
+	}
+	expectedValue := uint16(v)
+	if s.KeyManifestSignatureOffset != expectedValue {
+		return fmt.Errorf("field 'KeyManifestSignatureOffset' expects write-value '%v', but has %v", expectedValue, s.KeyManifestSignatureOffset)
 	}
 	// Recursively validating a child structure:
 	if err := s.KeyAndSignature.Validate(); err != nil {
@@ -135,7 +127,7 @@ func (s *CBnTManifest) Validate() error {
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
 func (s *CBnTManifest) GetStructInfo() cbnt.StructInfo {
-	return s.StructInfo
+	return s.StructInfoCBNT
 }
 
 // SetStructInfo sets new value of StructInfo to the structure.
@@ -143,127 +135,16 @@ func (s *CBnTManifest) GetStructInfo() cbnt.StructInfo {
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
 func (s *CBnTManifest) SetStructInfo(newStructInfo cbnt.StructInfo) {
-	s.StructInfo = newStructInfo
+	s.StructInfoCBNT = newStructInfo.(cbnt.StructInfoCBNT)
 }
 
 // ReadFrom reads the Manifest from 'r' in format defined in the document #575623.
 func (s *CBnTManifest) ReadFrom(r io.Reader) (int64, error) {
-	var totalN int64
-
-	err := binary.Read(r, binary.LittleEndian, &s.StructInfo)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read structure info at %d: %w", totalN, err)
-	}
-	totalN += int64(binary.Size(s.StructInfo))
-
-	n, err := s.ReadDataFrom(r)
-	if err != nil {
-		return totalN, fmt.Errorf("unable to read data: %w", err)
-	}
-	totalN += n
-
-	return totalN, nil
-}
-
-// ReadDataFrom reads the Manifest from 'r' excluding StructInfo,
-// in format defined in the document #575623.
-func (s *CBnTManifest) ReadDataFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// Not sure if this comment brings anything, so ill leave it for now
-	// // StructInfo (ManifestFieldType: structInfo)
-	// {
-	// 	// ReadDataFrom does not read Struct, use ReadFrom for that.
-	// }
-
-	// KeyManifestSignatureOffset (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.KeyManifestSignatureOffset)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KeyManifestSignatureOffset': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved2 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 3, binary.Read(r, binary.LittleEndian, s.Reserved2[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Reserved2': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Revision (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.Revision)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Revision': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KMSVN (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.KMSVN)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KMSVN': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KMID (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.KMID)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KMID': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PubKeyHashAlg (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.PubKeyHashAlg)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'PubKeyHashAlg': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Hash (ManifestFieldType: list)
-	{
-		var count uint16
-		err := binary.Read(r, binary.LittleEndian, &count)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read the count for field 'Hash': %w", err)
-		}
-		totalN += int64(binary.Size(count))
-		s.Hash = make([]Hash, count)
-
-		for idx := range s.Hash {
-			n, err := s.Hash[idx].ReadFrom(r)
-			if err != nil {
-				return totalN, fmt.Errorf("unable to read field 'Hash[%d]': %w", idx, err)
-			}
-			totalN += int64(n)
-		}
-	}
-
-	// KeyAndSignature (ManifestFieldType: subStruct)
-	{
-		n, err := s.KeyAndSignature.ReadFrom(r)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KeyAndSignature': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, s)
 }
 
 // RehashRecursive calls Rehash (see below) recursively.
 func (s *CBnTManifest) RehashRecursive() {
-	s.StructInfo.Rehash()
 	s.KeyAndSignature.Rehash()
 	s.Rehash()
 }
@@ -288,7 +169,7 @@ func (s *CBnTManifest) WriteTo(w io.Writer) (int64, error) {
 
 	// StructInfo (ManifestFieldType: structInfo)
 	{
-		n, err := s.StructInfo.WriteTo(w)
+		n, err := s.StructInfoCBNT.WriteTo(w)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
 		}
@@ -383,8 +264,8 @@ func (s *CBnTManifest) Layout() []cbnt.LayoutField {
 		{
 			ID:    0,
 			Name:  "Struct Info",
-			Size:  func() uint64 { return s.StructInfo.TotalSize() },
-			Value: func() any { return &s.StructInfo },
+			Size:  func() uint64 { return s.StructInfoCBNT.TotalSize() },
+			Value: func() any { return s.StructInfoCBNT },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
