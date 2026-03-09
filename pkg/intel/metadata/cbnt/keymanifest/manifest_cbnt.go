@@ -45,10 +45,20 @@ type CBnTManifest struct {
 
 	// Hash is the slice of KMHASH_STRUCT (KHS) structures (see table 5-3
 	// of the document #575623). Describes BPM pubkey digest (among other).
-	Hash []Hash `json:"kmHash"`
+	Hash HashList `json:"kmHash"`
 
 	// KeyAndSignature is the Key Manifest signature.
 	KeyAndSignature cbnt.KeySignature `json:"kmKeySignature"`
+}
+
+type HashList []Hash
+
+func (l *HashList) Structures() []cbnt.Structure {
+	out := make([]cbnt.Structure, 0, len(*l))
+	for i := range *l {
+		out = append(out, &(*l)[i])
+	}
+	return out
 }
 
 func (m *CBnTManifest) SetSignature(

@@ -57,4 +57,9 @@ type (
 	Manifest interface {
 		Structure
 	}
+
+	// An abstraction of slice of Structures
+	StructureList interface {
+		Structures() []Structure
+	}
 )
