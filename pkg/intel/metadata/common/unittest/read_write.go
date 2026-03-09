@@ -11,6 +11,8 @@ import (
 	"os"
 	"testing"
 
+	// "github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 	"github.com/stretchr/testify/require"
@@ -27,18 +29,7 @@ func sizeList(m cbnt.Manifest) map[int]uint64 {
 	return ret
 }
 
-func ManifestReadWrite(t *testing.T, m cbnt.Manifest, testDataFilePath string) {
-	testData, err := os.ReadFile(testDataFilePath)
-	require.NoError(t, err)
-
-	nR, err := m.ReadFrom(bytes.NewReader(append(testData, []byte(`extra bytes`)...)))
-	require.NoError(t, err)
-	require.Equal(t, int64(len(testData)), nR)
-
-	// We have to read the values AFTER the read, otherwise all the fields of dynamic
-	// type will be incorrect (obviously).
-	list := sizeList(m)
-
+func sizeAndOffset(t *testing.T, list map[int]uint64, m cbnt.Manifest) uint64 {
 	// Sizes
 	for i := 0; i < len(m.Layout()); i++ {
 		s, err := m.SizeOf(i)
@@ -59,12 +50,29 @@ func ManifestReadWrite(t *testing.T, m cbnt.Manifest, testDataFilePath string) {
 		prev += list[i]
 	}
 
+	return prev
+}
+
+func ManifestReadWrite(t *testing.T, m cbnt.Manifest, testDataFilePath string) {
+	testData, err := os.ReadFile(testDataFilePath)
+	require.NoError(t, err)
+
+	nR, err := m.ReadFrom(bytes.NewReader(append(testData, []byte(`extra bytes`)...)))
+	require.NoError(t, err)
+	require.Equal(t, int64(len(testData)), nR)
+
+	// We have to read the values AFTER the read, otherwise all the fields of dynamic
+	// type will be incorrect (obviously).
+	list := sizeList(m)
+
+	sizeAndOffset(t, list, m)
+
 	// Getters
 	l := m.Layout()
 	field0 := l[0]
 	val := field0.Value
 
-	// So we don't know here what exact type we are testing, but we know it should implement getter and setter.
+	// So same as above we don't know here what exact type we are testing, but we know it should implement getter and setter.
 	// Thus we can make sneaky type assertion to an interface that only has these methids, and let the test fail
 	// if the actual type that we are testing contains this methods.
 	type structInfoAccessor interface {
@@ -106,7 +114,7 @@ func ManifestReadWrite(t *testing.T, m cbnt.Manifest, testDataFilePath string) {
 	actualOutput := buf.String()
 
 	// This really depends on what testDataFilePath was used, but since this is supposed to be generic
-	// as possible, let's cover both
+	// as possible, let's cover both. TODO: think of a better way so that we can also include BPM here
 	expectedUnsigned := fmt.Sprintf("%v\n  --KeyAndSignature--\n\tKey Manifest not signed!\n\n",
 		m.PrettyString(1, true, pretty.OptionOmitKeySignature(true)))
 
@@ -125,4 +133,30 @@ func ManifestReadWrite(t *testing.T, m cbnt.Manifest, testDataFilePath string) {
 	require.Equal(t, string(testData), out.String())
 	require.Equal(t, nW, nR)
 	require.Equal(t, nW, int64(out.Len()))
+
+	// Sub Structures, for all of the fields of the manifest
+	// that we are testing, we can check whether these are implementing
+	// cbnt.Structure, and basically run exactly the same tests as we did
+	// for the manifest itself (well almost exactlu the same :D).
+	for _, f := range m.Layout() {
+		subStruct := f.Value()
+
+		accessor, ok := subStruct.(cbnt.Structure)
+		if ok {
+			list := sizeList(accessor)
+			total := sizeAndOffset(t, list, accessor)
+			require.Equal(t, total, accessor.TotalSize())
+		}
+
+		// special case for []Hash, iirc in BPM there are not that many of these either
+		// so we can have few "unicorns" here as well
+		hashAccessor, ok := subStruct.(cbnt.StructureList)
+		if ok {
+			for _, i := range hashAccessor.Structures() {
+				list := sizeList(i)
+				total := sizeAndOffset(t, list, i)
+				require.Equal(t, total, i.TotalSize())
+			}
+		}
+	}
 }
