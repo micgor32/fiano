@@ -31,6 +31,10 @@ type (
 		io.ReaderFrom
 		io.WriterTo
 		TotalSize() uint64
+		SizeOf(id int) (uint64, error)
+		OffsetOf(id int) (uint64, error)
+		Layout() []LayoutField
+		Validate() error
 		// PrettyString returns the whole object as a structured string.
 		PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string
 	}
