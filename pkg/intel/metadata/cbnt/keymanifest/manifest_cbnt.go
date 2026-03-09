@@ -106,7 +106,7 @@ func (m *CBnTManifest) ValidateBPMKey(bpmKS cbnt.KeySignature) error {
 }
 
 func (s *CBnTManifest) Validate() error {
-	v, err := s.OffsetOf(9)
+	v, err := s.OffsetOf(8)
 	if err != nil {
 		return fmt.Errorf("error on field 'KeyAndSignature': %w", err)
 	}
@@ -154,7 +154,7 @@ func (s *CBnTManifest) RehashRecursive() {
 func (s *CBnTManifest) Rehash() {
 	s.Variable0 = 0
 	s.ElementSize = 0
-	v, err := s.OffsetOf(9)
+	v, err := s.OffsetOf(8)
 	if err != nil {
 		// TODO: this will never be true, but still lets think of how to handle
 	}
@@ -276,42 +276,42 @@ func (s *CBnTManifest) Layout() []cbnt.LayoutField {
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
-			ID:    3,
+			ID:    2,
 			Name:  "Reserved 2",
 			Size:  func() uint64 { return 3 },
 			Value: func() any { return &s.Reserved2 },
 			Type:  cbnt.ManifestFieldArrayStatic,
 		},
 		{
-			ID:    4,
+			ID:    3,
 			Name:  "Revision",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.Revision },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
-			ID:    5,
+			ID:    4,
 			Name:  "KMSVN",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.KMSVN },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
-			ID:    6,
+			ID:    5,
 			Name:  "KMID",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.KMID },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
-			ID:    7,
+			ID:    6,
 			Name:  "Pub Key Hash Alg",
 			Size:  func() uint64 { return 2 },
 			Value: func() any { return &s.PubKeyHashAlg },
 			Type:  cbnt.ManifestFieldEndValue,
 		},
 		{
-			ID:   8,
+			ID:   7,
 			Name: fmt.Sprintf("Hash: Array of \"Key Manifest\" of length %d", len(s.Hash)),
 			Size: func() uint64 {
 				size := uint64(binary.Size(uint16(0)))
@@ -341,7 +341,7 @@ func (s *CBnTManifest) Layout() []cbnt.LayoutField {
 			},
 		},
 		{
-			ID:    9,
+			ID:    8,
 			Name:  "Key And Signature",
 			Size:  func() uint64 { return s.KeyAndSignature.TotalSize() },
 			Value: func() any { return &s.KeyAndSignature },

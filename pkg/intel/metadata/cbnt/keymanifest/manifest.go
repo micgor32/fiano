@@ -26,6 +26,9 @@ type Manifest interface {
 	SetStructInfo(newStructInfo cbnt.StructInfo)
 	ReadFrom(r io.Reader) (int64, error)
 	WriteTo(w io.Writer) (int64, error)
+	SizeOf(id int) (uint64, error)
+	OffsetOf(id int) (uint64, error)
+	Layout() []cbnt.LayoutField
 	TotalSize() uint64
 	PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string
 	Print()
