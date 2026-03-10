@@ -1,4 +1,4 @@
-// Copyright 2017-2021 the LinuxBoot Authors. All rights reserved
+// Copyright 2017-2026 the LinuxBoot Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -8,31 +8,77 @@ package cbntbootpolicy
 
 import (
 	"bytes"
-	"fmt"
-
 	"encoding/binary"
+	"fmt"
 	"io"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
+	pkgbytes "github.com/linuxboot/fiano/pkg/bytes"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
-
-	pkgbytes "github.com/linuxboot/fiano/pkg/bytes"
 	"github.com/linuxboot/fiano/pkg/uefi"
 )
 
-// Manifest is a boot policy manifest
-// TODO: handle as with km
+type Manifest interface {
+	cbnt.Manifest
+}
+
+// NewManifest returns a new instance of Manifest with
+// all default values set.
+func NewManifest(bgv cbnt.BootGuardVersion) (Manifest, error) {
+	bpmh, err := NewBPMH(bgv)
+	if err != nil {
+		return nil, err
+	}
+
+	pmse, err := NewSignature(bgv)
+	if err != nil {
+		return nil, err
+	}
+
+	switch bgv {
+	case cbnt.Version10:
+		bgBPMH, ok := bpmh.(*BPMHBG)
+		if !ok {
+			return nil, fmt.Errorf("unexpected BPMH type %T for BG", bpmh)
+		}
+		m := &ManifestBG{BPMHBG: *bgBPMH, PMSE: *pmse}
+		m.Rehash()
+		return m, nil
+	case cbnt.Version20, cbnt.Version21:
+		cbntBPMH, ok := bpmh.(*BPMHCBnT)
+		if !ok {
+			return nil, fmt.Errorf("unexpected BPMH type %T for CBnT", bpmh)
+		}
+		m := &ManifestCBnT{BPMHCBnT: *cbntBPMH, PMSE: *pmse}
+		m.Rehash()
+		return m, nil
+	default:
+		return nil, fmt.Errorf("version not supported")
+	}
+}
+
 // PrettyString: Boot Policy Manifest
-type Manifest struct {
+type ManifestBG struct {
+	cbnt.Common
+	// PrettyString: BPMH: Header
+	BPMHBG `rehashValue:"rehashedBPMH()" json:"bpmHeader"`
+	SE     []SEBG `json:"bpmSE"`
+	// PrettyString: PME: Platform Manufacturer
+	PME *PMBG `json:"bpmPME,omitempty"`
+	// PrettyString: PMSE: Signature
+	PMSE Signature `json:"bpmSignature"`
+}
+
+// PrettyString: Boot Policy Manifest
+type ManifestCBnT struct {
 	cbnt.Common
 	// BPMH is the header of the boot policy manifest
 	//
 	// PrettyString: BPMH: Header
-	BPMH `rehashValue:"rehashedBPMH()" json:"bpmHeader"`
+	BPMHCBnT `rehashValue:"rehashedBPMH()" json:"bpmHeader"`
 
-	SE   []SE      `json:"bpmSE"`
+	SE   []SECBnT  `json:"bpmSE"`
 	TXTE *TXT      `json:"bpmTXTE,omitempty"`
 	Res  *Reserved `json:"bpmReserved,omitempty"`
 
@@ -44,7 +90,7 @@ type Manifest struct {
 	// PME is the platform manufacturer element
 	//
 	// PrettyString: PME: Platform Manufacturer
-	PME *PM `json:"bpmPME,omitempty"`
+	PME *PMCBnT `json:"bpmPME,omitempty"`
 
 	// PMSE is the signature element
 	//
@@ -52,37 +98,50 @@ type Manifest struct {
 	PMSE Signature `json:"bpmSignature"`
 }
 
-// NewManifest returns a new instance of Manifest with
-// all default values set.
-func NewManifest() *Manifest {
-	s := &Manifest{}
-	// Recursively initializing a child structure:
-	s.BPMH = *NewBPMH()
-	// Recursively initializing a child structure:
-	s.PMSE = *NewSignature()
-	s.Rehash()
-	return s
+// fieldIndexByStructID returns the position index within
+// structure Manifest of the field by its StructureID
+// (see document #575623, an example of StructureID value is "__KEYM__").
+func (_ ManifestBG) fieldIndexByStructID(structID string) int {
+	switch structID {
+	case StructureIDBPMH:
+		return 0
+	case StructureIDSE:
+		return 1
+	case StructureIDPM:
+		return 2
+	case StructureIDSignature:
+		return 3
+	}
+
+	return -1
 }
 
-// Validate (recursively) checks the structure if there are any unexpected
-// values. It returns an error if so.
-func (s *Manifest) Validate() error {
-	// Recursively validating a child structure:
-	if err := s.BPMH.Validate(); err != nil {
+// fieldNameByIndex returns the name of the field by its position number
+// within structure Manifest.
+func (_ ManifestBG) fieldNameByIndex(fieldIndex int) string {
+	switch fieldIndex {
+	case 0:
+		return "BPMH"
+	case 1:
+		return "SE"
+	case 2:
+		return "PME"
+	case 3:
+		return "PMSE"
+	}
 
+	return fmt.Sprintf("invalidFieldIndex_%d", fieldIndex)
+}
+
+// Validate (recursively) checks the structure if there are any unexpected values.
+func (s *ManifestBG) Validate() error {
+	if err := s.BPMHBG.Validate(); err != nil {
 		return fmt.Errorf("error on field 'BPMH': %w", err)
 	}
-	spew.Dump(s.BPMH)
-	spew.Dump(BPMH(s.rehashedBPMH()))
-
-	// See tag "rehashValue"
-	{
-		expectedValue := BPMH(s.rehashedBPMH())
-		if s.BPMH != expectedValue {
-			return fmt.Errorf("field 'BPMH' expects write-value '%v', but has %v", expectedValue, s.BPMH)
-		}
+	expectedValue := s.rehashedBPMH()
+	if s.BPMHBG != expectedValue {
+		return fmt.Errorf("field 'BPMH' expects write-value '%v', but has %v", expectedValue, s.BPMHBG)
 	}
-	// Recursively validating a child structure:
 	if err := s.PMSE.Validate(); err != nil {
 		return fmt.Errorf("error on field 'PMSE': %w", err)
 	}
@@ -90,10 +149,312 @@ func (s *Manifest) Validate() error {
 	return nil
 }
 
-// fieldIndexByStructID returns the position index within
-// structure Manifest of the field by its StructureID
-// (see document #575623, an example of StructureID value is "__KEYM__").
-func (_ Manifest) fieldIndexByStructID(structID string) int {
+func (s *ManifestBG) Layout() []cbnt.LayoutField {
+	return []cbnt.LayoutField{
+		{
+			ID:    0,
+			Name:  "BPMH",
+			Size:  func() uint64 { return s.BPMHBG.TotalSize() },
+			Value: func() any { return &s.BPMHBG },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:   1,
+			Name: fmt.Sprintf("SE: Array of \"Boot Policy Manifest\" of length %d", len(s.SE)),
+			Size: func() uint64 {
+				var size uint64
+				for idx := range s.SE {
+					size += s.SE[idx].TotalSize()
+				}
+				return size
+			},
+			Value: func() any { return &s.SE },
+			Type:  cbnt.ManifestFieldList,
+		},
+		{
+			ID:   2,
+			Name: "PME",
+			Size: func() uint64 {
+				if s.PME == nil {
+					return 0
+				}
+				return s.PME.TotalSize()
+			},
+			Value: func() any { return s.PME },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    3,
+			Name:  "PMSE",
+			Size:  func() uint64 { return s.PMSE.TotalSize() },
+			Value: func() any { return &s.PMSE },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+	}
+}
+
+func (s *ManifestBG) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("Manifest: %v", err)
+	}
+	return ret, nil
+}
+
+func (s *ManifestBG) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("Manifest: %v", err)
+	}
+	return ret, nil
+}
+
+// ReadFrom reads the Manifest from 'r' in format defined in the document #575623.
+// Note that the BPM is a special case: we do not use common way of handling the reading here.
+func (s *ManifestBG) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
+	var missingFieldsByIndices = [4]bool{
+		0: true,
+		3: true,
+	}
+	defer func() {
+		if returnErr != nil {
+			return
+		}
+		for fieldIndex, v := range missingFieldsByIndices {
+			if v {
+				returnErr = fmt.Errorf("field '%s' is missing", s.fieldNameByIndex(fieldIndex))
+				break
+			}
+		}
+	}()
+	var totalN int64
+	previousFieldIndex := int(-1)
+	for {
+		var structInfo cbnt.StructInfoBG
+		err := binary.Read(r, binary.LittleEndian, &structInfo)
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return totalN, nil
+		}
+		if err != nil {
+			return totalN, fmt.Errorf("unable to read structure info at %d: %w", totalN, err)
+		}
+		totalN += int64(binary.Size(structInfo))
+
+		structID := structInfo.ID.String()
+		fieldIndex := s.fieldIndexByStructID(structID)
+		if fieldIndex < 0 {
+			// TODO: report error "unknown structure ID: '"+structID+"'"
+			continue
+		}
+		if cbnt.StrictOrderCheck && fieldIndex < previousFieldIndex {
+			return totalN, fmt.Errorf("invalid order of fields (%d < %d): structure '%s' is out of order", fieldIndex, previousFieldIndex, structID)
+		}
+		missingFieldsByIndices[fieldIndex] = false
+
+		var n int64
+		switch structID {
+		case StructureIDBPMH:
+			if fieldIndex == previousFieldIndex {
+				return totalN, fmt.Errorf("field 'BPMH' is not a slice, but multiple elements found")
+			}
+			s.BPMHBG.SetStructInfo(structInfo)
+			n, err = s.BPMHBG.ReadFromHelper(r, false)
+			if err != nil {
+				return totalN, fmt.Errorf("unable to read field BPMH at %d: %w", totalN, err)
+			}
+		case StructureIDSE:
+			var el SEBG
+			el.SetStructInfo(structInfo)
+			n, err = el.ReadFromHelper(r, false)
+			s.SE = append(s.SE, el)
+			if err != nil {
+				return totalN, fmt.Errorf("unable to read field SE at %d: %w", totalN, err)
+			}
+		case StructureIDPM:
+			if fieldIndex == previousFieldIndex {
+				return totalN, fmt.Errorf("field 'PME' is not a slice, but multiple elements found")
+			}
+			s.PME = &PMBG{}
+			s.PME.SetStructInfo(structInfo)
+			n, err = s.PME.ReadFromHelper(r, false)
+			if err != nil {
+				return totalN, fmt.Errorf("unable to read field PME at %d: %w", totalN, err)
+			}
+		case StructureIDSignature:
+			if fieldIndex == previousFieldIndex {
+				return totalN, fmt.Errorf("field 'PMSE' is not a slice, but multiple elements found")
+			}
+			s.PMSE.SetStructInfo(structInfo)
+			n, err = s.PMSE.ReadFromHelper(r, false)
+			if err != nil {
+				return totalN, fmt.Errorf("unable to read field PMSE at %d: %w", totalN, err)
+			}
+		default:
+			return totalN, fmt.Errorf("there is no field with structure ID '%s' in Manifest", structInfo.ID)
+		}
+		totalN += n
+		previousFieldIndex = fieldIndex
+	}
+
+}
+
+func (s *ManifestBG) RehashRecursive() {
+	for idx := range s.SE {
+		s.SE[idx].RehashRecursive()
+	}
+	if s.PME != nil {
+		// no-op for BG PM
+	}
+	s.PMSE.Rehash()
+	s.Rehash()
+}
+
+func (s *ManifestBG) Rehash() {
+	s.BPMHBG = s.rehashedBPMH()
+}
+
+func (s *ManifestBG) WriteTo(w io.Writer) (int64, error) {
+	totalN := int64(0)
+	s.Rehash()
+
+	{
+		n, err := s.BPMHBG.WriteTo(w)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'BPMH': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	for idx := range s.SE {
+		n, err := s.SE[idx].WriteTo(w)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'SE[%d]': %w", idx, err)
+		}
+		totalN += int64(n)
+	}
+
+	if s.PME != nil {
+		n, err := s.PME.WriteTo(w)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'PME': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	{
+		n, err := s.PMSE.WriteTo(w)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'PMSE': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	return totalN, nil
+}
+
+func (s *ManifestBG) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+	return s.Common.TotalSize(s)
+}
+
+// PrettyString returns the content of the structure in an easy-to-read format.
+func (s *ManifestBG) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	var lines []string
+	if withHeader {
+		lines = append(lines, pretty.Header(depth, "Boot Policy Manifest", s))
+	}
+	if s == nil {
+		return strings.Join(lines, "\n")
+	}
+	// ManifestFieldType is element
+	lines = append(lines, pretty.SubValue(depth+1, "BPMH: Header", "", &s.BPMHBG, opts...)...)
+	// ManifestFieldType is elementList
+	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("SE: Array of \"Boot Policy Manifest\" of length %d", len(s.SE)), s.SE))
+	for i := 0; i < len(s.SE); i++ {
+		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.SE[i].PrettyString(depth+2, true)))
+	}
+	if depth < 1 {
+		lines = append(lines, "")
+	}
+	// ManifestFieldType is element
+	lines = append(lines, pretty.SubValue(depth+1, "PME: Platform Manufacturer", "", s.PME, opts...)...)
+	// ManifestFieldType is element
+	lines = append(lines, pretty.SubValue(depth+1, "PMSE: Signature", "", &s.PMSE, opts...)...)
+	if depth < 2 {
+		lines = append(lines, "")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (s *ManifestBG) StructInfo() cbnt.StructInfo {
+	return s.BPMHBG.StructInfoBG
+}
+
+func (s *ManifestBG) GetStructInfo() cbnt.StructInfo {
+	return s.BPMHBG.StructInfoBG
+}
+
+func (s *ManifestBG) SetStructInfo(newStructInfo cbnt.StructInfo) {
+	s.BPMHBG.StructInfoBG = newStructInfo.(cbnt.StructInfoBG)
+}
+
+func (bpm *ManifestBG) ValidateIBB(firmware uefi.Firmware) error {
+	if bpm.SE[0].Digest.TotalSize() == 0 {
+		return fmt.Errorf("no IBB hashes")
+	}
+
+	digest := bpm.SE[0].Digest
+	h, err := digest.HashAlg.Hash()
+	if err != nil {
+		return fmt.Errorf("invalid hash function: %v", digest.HashAlg)
+	}
+
+	for _, r := range bpm.IBBDataRanges(uint64(len(firmware.Buf()))) {
+		if _, err := h.Write(firmware.Buf()[r.Offset:r.End()]); err != nil {
+			return fmt.Errorf("unable to hash: %w", err)
+		}
+	}
+	hashValue := h.Sum(nil)
+
+	if !bytes.Equal(hashValue, digest.HashBuffer) {
+		return fmt.Errorf("IBB %s hash mismatch: %X != %X", digest.HashAlg, hashValue, digest.HashBuffer)
+	}
+
+	return nil
+}
+
+// IBBDataRanges returns data ranges of IBB.
+func (bpm *ManifestBG) IBBDataRanges(firmwareSize uint64) pkgbytes.Ranges {
+	return ibbDataRanges(bpm.SE[0].IBBSegments, firmwareSize)
+}
+
+func (bpm *ManifestBG) rehashedBPMH() BPMHBG {
+	return bpm.BPMHBG
+}
+
+func (bpm ManifestBG) Print() {
+	fmt.Printf("%v", bpm.BPMHBG.PrettyString(1, true))
+	for _, item := range bpm.SE {
+		fmt.Printf("%v", item.PrettyString(1, true))
+	}
+
+	if bpm.PME != nil {
+		fmt.Printf("%v\n", bpm.PME.PrettyString(1, true))
+	} else {
+		fmt.Println("  --PME--\n\tnot set!(optional)")
+	}
+
+	if len(bpm.PMSE.Signature.Data) < 1 {
+		fmt.Printf("%v\n", bpm.PMSE.PrettyString(1, true, pretty.OptionOmitKeySignature(true)))
+		fmt.Printf("  --PMSE--\n\tBoot Policy Manifest not signed!\n\n")
+	} else {
+		fmt.Printf("%v\n", bpm.PMSE.PrettyString(1, true, pretty.OptionOmitKeySignature(false)))
+	}
+}
+
+func (_ ManifestCBnT) fieldIndexByStructID(structID string) int {
 	switch structID {
 	case StructureIDBPMH:
 		return 0
@@ -114,9 +475,7 @@ func (_ Manifest) fieldIndexByStructID(structID string) int {
 	return -1
 }
 
-// fieldNameByIndex returns the name of the field by its position number
-// within structure Manifest.
-func (_ Manifest) fieldNameByIndex(fieldIndex int) string {
+func (_ ManifestCBnT) fieldNameByIndex(fieldIndex int) string {
 	switch fieldIndex {
 	case 0:
 		return "BPMH"
@@ -137,13 +496,28 @@ func (_ Manifest) fieldNameByIndex(fieldIndex int) string {
 	return fmt.Sprintf("invalidFieldIndex_%d", fieldIndex)
 }
 
-func (s *Manifest) Layout() []cbnt.LayoutField {
+// Validate (recursively) checks the structure if there are any unexpected values.
+func (s *ManifestCBnT) Validate() error {
+	if err := s.BPMHCBnT.Validate(); err != nil {
+		return fmt.Errorf("error on field 'BPMH': %w", err)
+	}
+	if s.BPMHCBnT != s.rehashedBPMH() {
+		return fmt.Errorf("field 'BPMH' expects write-value '%v', but has %v", s.rehashedBPMH(), s.BPMHCBnT)
+	}
+	if err := s.PMSE.Validate(); err != nil {
+		return fmt.Errorf("error on field 'PMSE': %w", err)
+	}
+
+	return nil
+}
+
+func (s *ManifestCBnT) Layout() []cbnt.LayoutField {
 	return []cbnt.LayoutField{
 		{
 			ID:    0,
 			Name:  "BPMH: Header",
-			Size:  func() uint64 { return s.BPMH.TotalSize() },
-			Value: func() any { return &s.BPMH },
+			Size:  func() uint64 { return s.BPMHCBnT.TotalSize() },
+			Value: func() any { return &s.BPMHCBnT },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
@@ -217,7 +591,7 @@ func (s *Manifest) Layout() []cbnt.LayoutField {
 	}
 }
 
-func (s *Manifest) SizeOf(id int) (uint64, error) {
+func (s *ManifestCBnT) SizeOf(id int) (uint64, error) {
 	ret, err := s.Common.SizeOf(s, id)
 	if err != nil {
 		return ret, fmt.Errorf("Manifest: %v", err)
@@ -226,7 +600,7 @@ func (s *Manifest) SizeOf(id int) (uint64, error) {
 	return ret, nil
 }
 
-func (s *Manifest) OffsetOf(id int) (uint64, error) {
+func (s *ManifestCBnT) OffsetOf(id int) (uint64, error) {
 	ret, err := s.Common.OffsetOf(s, id)
 	if err != nil {
 		return ret, fmt.Errorf("Manifest: %v", err)
@@ -236,7 +610,8 @@ func (s *Manifest) OffsetOf(id int) (uint64, error) {
 }
 
 // ReadFrom reads the Manifest from 'r' in format defined in the document #575623.
-func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
+// Same note as above: this is an exception from the rule of usijg common approach.
+func (s *ManifestCBnT) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 	var missingFieldsByIndices = [7]bool{
 		0: true,
 		6: true,
@@ -255,7 +630,7 @@ func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 	var totalN int64
 	previousFieldIndex := int(-1)
 	for {
-		var structInfo cbnt.StructInfo
+		var structInfo cbnt.StructInfoCBNT
 		err := binary.Read(r, binary.LittleEndian, &structInfo)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return totalN, nil
@@ -282,15 +657,15 @@ func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 			if fieldIndex == previousFieldIndex {
 				return totalN, fmt.Errorf("field 'BPMH' is not a slice, but multiple elements found")
 			}
-			s.BPMH.SetStructInfo(structInfo)
-			n, err = s.BPMH.ReadFrom(r, false)
+			s.BPMHCBnT.SetStructInfo(structInfo)
+			n, err = s.BPMHCBnT.ReadFromHelper(r, false)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field BPMH at %d: %w", totalN, err)
 			}
 		case StructureIDSE:
-			var el SE
+			var el SECBnT
 			el.SetStructInfo(structInfo)
-			n, err = el.ReadDataFrom(r)
+			n, err = el.ReadFromHelper(r, false)
 			s.SE = append(s.SE, el)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field SE at %d: %w", totalN, err)
@@ -301,7 +676,7 @@ func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 			}
 			s.TXTE = &TXT{}
 			s.TXTE.SetStructInfo(structInfo)
-			n, err = s.TXTE.ReadDataFrom(r)
+			n, err = s.TXTE.ReadFromHelper(r, false)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field TXTE at %d: %w", totalN, err)
 			}
@@ -311,7 +686,7 @@ func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 			}
 			s.Res = &Reserved{}
 			s.Res.SetStructInfo(structInfo)
-			n, err = s.Res.ReadDataFrom(r)
+			n, err = s.Res.ReadFromHelper(r, false)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field Res at %d: %w", totalN, err)
 			}
@@ -321,7 +696,7 @@ func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 			}
 			s.PCDE = &PCD{}
 			s.PCDE.SetStructInfo(structInfo)
-			n, err = s.PCDE.ReadDataFrom(r)
+			n, err = s.PCDE.ReadFromHelper(r, false)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field PCDE at %d: %w", totalN, err)
 			}
@@ -329,9 +704,9 @@ func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 			if fieldIndex == previousFieldIndex {
 				return totalN, fmt.Errorf("field 'PME' is not a slice, but multiple elements found")
 			}
-			s.PME = &PM{}
+			s.PME = &PMCBnT{}
 			s.PME.SetStructInfo(structInfo)
-			n, err = s.PME.ReadDataFrom(r)
+			n, err = s.PME.ReadFromHelper(r, false)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field PME at %d: %w", totalN, err)
 			}
@@ -340,7 +715,7 @@ func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 				return totalN, fmt.Errorf("field 'PMSE' is not a slice, but multiple elements found")
 			}
 			s.PMSE.SetStructInfo(structInfo)
-			n, err = s.PMSE.ReadDataFrom(r)
+			n, err = s.PMSE.ReadFromHelper(r, false)
 			if err != nil {
 				return totalN, fmt.Errorf("unable to read field PMSE at %d: %w", totalN, err)
 			}
@@ -352,9 +727,11 @@ func (s *Manifest) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 	}
 }
 
-// RehashRecursive calls Rehash (see below) recursively.
-func (s *Manifest) RehashRecursive() {
-	s.BPMH.Rehash()
+func (s *ManifestCBnT) RehashRecursive() {
+	s.BPMHCBnT.Rehash()
+	for idx := range s.SE {
+		s.SE[idx].RehashRecursive()
+	}
 	if s.TXTE != nil {
 		s.TXTE.Rehash()
 	}
@@ -371,39 +748,30 @@ func (s *Manifest) RehashRecursive() {
 	s.Rehash()
 }
 
-// Rehash sets values which are calculated automatically depending on the rest
-// data. It is usually about the total size field of an element.
-func (s *Manifest) Rehash() {
-	s.BPMH = BPMH(s.rehashedBPMH())
+func (s *ManifestCBnT) Rehash() {
+	s.BPMHCBnT = s.rehashedBPMH()
 }
 
-// WriteTo writes the Manifest into 'w' in format defined in
-// the document #575623.
-func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
+func (s *ManifestCBnT) WriteTo(w io.Writer) (int64, error) {
 	totalN := int64(0)
 	s.Rehash()
 
-	// BPMH (ManifestFieldType: element)
 	{
-		n, err := s.BPMH.WriteTo(w)
+		n, err := s.BPMHCBnT.WriteTo(w)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'BPMH': %w", err)
 		}
 		totalN += int64(n)
 	}
 
-	// SE (ManifestFieldType: elementList)
-	{
-		for idx := range s.SE {
-			n, err := s.SE[idx].WriteTo(w)
-			if err != nil {
-				return totalN, fmt.Errorf("unable to write field 'SE[%d]': %w", idx, err)
-			}
-			totalN += int64(n)
+	for idx := range s.SE {
+		n, err := s.SE[idx].WriteTo(w)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'SE[%d]': %w", idx, err)
 		}
+		totalN += int64(n)
 	}
 
-	// TXTE (ManifestFieldType: element)
 	if s.TXTE != nil {
 		n, err := s.TXTE.WriteTo(w)
 		if err != nil {
@@ -412,7 +780,6 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 		totalN += int64(n)
 	}
 
-	// Res (ManifestFieldType: element)
 	if s.Res != nil {
 		n, err := s.Res.WriteTo(w)
 		if err != nil {
@@ -421,7 +788,6 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 		totalN += int64(n)
 	}
 
-	// PCDE (ManifestFieldType: element)
 	if s.PCDE != nil {
 		n, err := s.PCDE.WriteTo(w)
 		if err != nil {
@@ -430,7 +796,6 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 		totalN += int64(n)
 	}
 
-	// PME (ManifestFieldType: element)
 	if s.PME != nil {
 		n, err := s.PME.WriteTo(w)
 		if err != nil {
@@ -439,7 +804,6 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 		totalN += int64(n)
 	}
 
-	// PMSE (ManifestFieldType: element)
 	{
 		n, err := s.PMSE.WriteTo(w)
 		if err != nil {
@@ -451,17 +815,15 @@ func (s *Manifest) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
-// Size returns the total size of the Manifest.
-func (s *Manifest) TotalSize() uint64 {
+func (s *ManifestCBnT) TotalSize() uint64 {
 	if s == nil {
 		return 0
 	}
-
 	return s.Common.TotalSize(s)
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
-func (s *Manifest) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+func (s *ManifestCBnT) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	var lines []string
 	if withHeader {
 		lines = append(lines, pretty.Header(depth, "Boot Policy Manifest", s))
@@ -470,7 +832,7 @@ func (s *Manifest) PrettyString(depth uint, withHeader bool, opts ...pretty.Opti
 		return strings.Join(lines, "\n")
 	}
 	// ManifestFieldType is element
-	lines = append(lines, pretty.SubValue(depth+1, "BPMH: Header", "", &s.BPMH, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "BPMH: Header", "", &s.BPMHCBnT, opts...)...)
 	// ManifestFieldType is elementList
 	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("SE: Array of \"Boot Policy Manifest\" of length %d", len(s.SE)), s.SE))
 	for i := 0; i < len(s.SE); i++ {
@@ -495,29 +857,32 @@ func (s *Manifest) PrettyString(depth uint, withHeader bool, opts ...pretty.Opti
 	return strings.Join(lines, "\n")
 }
 
-// StructInfo is the common header of any element.
-type StructInfo = cbnt.StructInfo
-
-// StructInfo is the information about how to parse the structure.
-func (bpm Manifest) StructInfo() StructInfo {
-	return bpm.BPMH.StructInfo
+func (s *ManifestCBnT) StructInfo() cbnt.StructInfo {
+	return s.BPMHCBnT.StructInfoCBNT
 }
 
-// ValidateIBB returns an error if IBB segments does not match the signature
-func (bpm *Manifest) ValidateIBB(firmware uefi.Firmware) error {
+func (s *ManifestCBnT) GetStructInfo() cbnt.StructInfo {
+	return s.BPMHCBnT.StructInfoCBNT
+}
+
+func (s *ManifestCBnT) SetStructInfo(newStructInfo cbnt.StructInfo) {
+	s.BPMHCBnT.StructInfoCBNT = newStructInfo.(cbnt.StructInfoCBNT)
+}
+
+// ValidateIBB returns an error if IBB segments does not match the signature.
+func (bpm *ManifestCBnT) ValidateIBB(firmware uefi.Firmware) error {
 	if len(bpm.SE[0].DigestList.List) == 0 {
 		return fmt.Errorf("no IBB hashes")
 	}
 
-	digest := bpm.SE[0].DigestList.List[0] // [0] instead of range -- is intentionally
-
+	digest := bpm.SE[0].DigestList.List[0]
 	h, err := digest.HashAlg.Hash()
 	if err != nil {
 		return fmt.Errorf("invalid hash function: %v", digest.HashAlg)
 	}
 
-	for _, _range := range bpm.IBBDataRanges(uint64(len(firmware.Buf()))) {
-		if _, err := h.Write(firmware.Buf()[_range.Offset:_range.End()]); err != nil {
+	for _, r := range bpm.IBBDataRanges(uint64(len(firmware.Buf()))) {
+		if _, err := h.Write(firmware.Buf()[r.Offset:r.End()]); err != nil {
 			return fmt.Errorf("unable to hash: %w", err)
 		}
 	}
@@ -531,10 +896,16 @@ func (bpm *Manifest) ValidateIBB(firmware uefi.Firmware) error {
 }
 
 // IBBDataRanges returns data ranges of IBB.
-func (bpm *Manifest) IBBDataRanges(firmwareSize uint64) pkgbytes.Ranges {
+func (bpm *ManifestCBnT) IBBDataRanges(firmwareSize uint64) pkgbytes.Ranges {
+	return ibbDataRanges(bpm.SE[0].IBBSegments, firmwareSize)
+}
+
+// Helper for IBBDataRanges. Moved to the separate func cause the logic is shared between
+// CBnT and BG.
+func ibbDataRanges(segments []IBBSegment, firmwareSize uint64) pkgbytes.Ranges {
 	var result pkgbytes.Ranges
 
-	for _, seg := range bpm.SE[0].IBBSegments {
+	for _, seg := range segments {
 		if seg.Flags&1 == 1 {
 			continue
 		}
@@ -545,31 +916,23 @@ func (bpm *Manifest) IBBDataRanges(firmwareSize uint64) pkgbytes.Ranges {
 	return result
 }
 
-// calculateOffsetFromPhysAddr calculates the offset within an image
-// of the physical address (address to a region mapped from
-// the SPI chip).
-//
-// Examples:
-//
-//	calculateOffsetFromPhysAddr(0xffffffff, 0x1000) == 0xfff
-//	calculateOffsetFromPhysAddr(0xffffffc0, 0x1000) == 0xfc0
+// calculateOffsetFromPhysAddr calculates the offset within an image of a physical address.
 func calculateOffsetFromPhysAddr(physAddr uint64, imageSize uint64) uint64 {
-	const basePhysAddr = 1 << 32 // "4GiB"
+	const basePhysAddr = 1 << 32
 	startAddr := basePhysAddr - imageSize
 	return physAddr - startAddr
 }
 
-func (bpm *Manifest) rehashedBPMH() BPMH {
-	bpmh := bpm.BPMH
+func (bpm *ManifestCBnT) rehashedBPMH() BPMHCBnT {
+	bpmh := bpm.BPMHCBnT
 	pmseOffs, _ := bpm.OffsetOf(6)
 	keySigOffs, _ := bpm.PMSE.OffsetOf(1)
 	bpmh.KeySignatureOffset = uint16(pmseOffs + keySigOffs)
 	return bpmh
 }
 
-// Print prints the Manifest
-func (bpm Manifest) Print() {
-	fmt.Printf("%v", bpm.BPMH.PrettyString(1, true))
+func (bpm ManifestCBnT) Print() {
+	fmt.Printf("%v", bpm.BPMHCBnT.PrettyString(1, true))
 	for _, item := range bpm.SE {
 		fmt.Printf("%v", item.PrettyString(1, true))
 	}

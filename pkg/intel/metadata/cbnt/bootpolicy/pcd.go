@@ -16,19 +16,18 @@ import (
 // PCD holds various Platform Config Data.
 type PCD struct {
 	cbnt.Common
-	StructInfo `id:"__PCDS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
-	Reserved0  [2]byte `json:"pcdReserved0,omitempty"`
-	SizeOfData [2]byte `json:"pcdSizeOfData,omitempty"`
-	Data       []byte  `json:"pcdData"`
+	cbnt.StructInfoCBNT `id:"__PCDS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
+	Reserved0           [2]byte `json:"pcdReserved0,omitempty"`
+	SizeOfData          [2]byte `json:"pcdSizeOfData,omitempty"`
+	Data                []byte  `json:"pcdData"`
 }
 
 // NewPCD returns a new instance of PCD with
 // all default values set.
 func NewPCD() *PCD {
 	s := &PCD{}
-	// TODO: same as with manifest
-	copy(s.StructInfo.(*cbnt.StructInfoCBNT).ID[:], []byte(StructureIDPCD))
-	s.StructInfo.(*cbnt.StructInfoCBNT).Version = 0x20
+	copy(s.StructInfoCBNT.ID[:], []byte(StructureIDPCD))
+	s.StructInfoCBNT.Version = 0x20
 	s.Rehash()
 	return s
 }
@@ -44,8 +43,8 @@ func (s *PCD) Layout() []cbnt.LayoutField {
 		{
 			ID:    0,
 			Name:  "Struct Info",
-			Size:  func() uint64 { return s.StructInfo.TotalSize() },
-			Value: func() any { return &s.StructInfo },
+			Size:  func() uint64 { return s.StructInfoCBNT.TotalSize() },
+			Value: func() any { return &s.StructInfoCBNT },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
@@ -70,11 +69,11 @@ func (s *PCD) Layout() []cbnt.LayoutField {
 				if size == 0 && len(s.Data) != 0 {
 					size = uint16(len(s.Data))
 				}
-				if s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize != 0 {
-					base := s.StructInfo.TotalSize() + 2 + 2
+				if s.StructInfoCBNT.ElementSize != 0 {
+					base := s.StructInfoCBNT.TotalSize() + 2 + 2
 					guessedSize := base + uint64(size)
-					if guessedSize != uint64(s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize) {
-						size = s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize - uint16(s.StructInfo.TotalSize()) - 2 - 2
+					if guessedSize != uint64(s.StructInfoCBNT.ElementSize) {
+						size = s.StructInfoCBNT.ElementSize - uint16(s.StructInfoCBNT.TotalSize()) - 2 - 2
 					}
 				}
 				return uint64(size)
@@ -108,7 +107,7 @@ func (s *PCD) OffsetOf(id int) (uint64, error) {
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
 func (s *PCD) GetStructInfo() cbnt.StructInfo {
-	return s.StructInfo
+	return s.StructInfoCBNT
 }
 
 // SetStructInfo sets new value of StructInfo to the structure.
@@ -116,11 +115,16 @@ func (s *PCD) GetStructInfo() cbnt.StructInfo {
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
 func (s *PCD) SetStructInfo(newStructInfo cbnt.StructInfo) {
-	s.StructInfo = newStructInfo
+	s.StructInfoCBNT = newStructInfo.(cbnt.StructInfoCBNT)
+}
+
+// Dummy helper to comply with cbnt.Structure interface
+func (s *PCD) ReadFrom(r io.Reader) (int64, error) {
+	return s.ReadFromHelper(r, true)
 }
 
 // ReadFrom reads the PCD from 'r' in format defined in the document #575623.
-func (s *PCD) ReadFrom(r io.Reader, info bool) (int64, error) {
+func (s *PCD) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 	l := s.Layout()
 
 	if !info {
@@ -139,8 +143,8 @@ func (s *PCD) RehashRecursive() {
 // Rehash sets values which are calculated automatically depending on the rest
 // data. It is usually about the total size field of an element.
 func (s *PCD) Rehash() {
-	s.StructInfo.(*cbnt.StructInfoCBNT).Variable0 = 0
-	s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize = uint16(s.TotalSize())
+	s.StructInfoCBNT.Variable0 = 0
+	s.StructInfoCBNT.ElementSize = uint16(s.TotalSize())
 }
 
 // WriteTo writes the PCD into 'w' in format defined in
@@ -151,7 +155,7 @@ func (s *PCD) WriteTo(w io.Writer) (int64, error) {
 
 	// StructInfo (ManifestFieldType: structInfo)
 	{
-		n, err := s.StructInfo.WriteTo(w)
+		n, err := s.StructInfoCBNT.WriteTo(w)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
 		}
@@ -191,8 +195,8 @@ func (s *PCD) TotalSize() uint64 {
 		return 0
 	}
 
-	if s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize != 0 {
-		return uint64(s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize)
+	if s.StructInfoCBNT.ElementSize != 0 {
+		return uint64(s.StructInfoCBNT.ElementSize)
 	}
 
 	return s.Common.TotalSize(s)

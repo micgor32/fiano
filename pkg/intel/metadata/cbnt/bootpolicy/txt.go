@@ -245,8 +245,13 @@ func (s *TXT) SetStructInfo(newStructInfo cbnt.StructInfoCBNT) {
 	s.StructInfoCBNT = newStructInfo
 }
 
+// Dummy helper to comply with requirements of cbnt.Structure interface
+func (s *TXT) ReadFrom(r io.Reader) (int64, error) {
+	return s.ReadFromHelper(r, true)
+}
+
 // ReadFrom reads the TXT from 'r' in format defined in the document #575623.
-func (s *TXT) ReadFrom(r io.Reader, info bool) (int64, error) {
+func (s *TXT) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 	l := s.Layout()
 
 	if !info {

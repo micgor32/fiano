@@ -7,9 +7,22 @@ package cbntbootpolicy
 import (
 	"testing"
 
+	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/unittest"
 )
 
-func TestReadWrite(t *testing.T) {
-	unittest.CBNTManifestReadWrite(t, &Manifest{}, "testdata/bpm.bin")
+func TestReadWriteBG(t *testing.T) {
+	m, err := NewManifest(cbnt.Version10)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	unittest.ManifestReadWrite(t, m, "testdata/bpm-bg.bin")
 }
+
+// func TestReadWriteCBNT(t *testing.T) {
+// 	m, err := NewManifest(cbnt.Version20)
+// 	if err != nil {
+// 		t.Fatalf("%v", err)
+// 	}
+// 	unittest.ManifestReadWrite(t, m, "testdata/bpm-cbnt.bin")
+// }

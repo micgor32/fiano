@@ -23,14 +23,14 @@ type Signature struct {
 func NewSignature(bgv cbnt.BootGuardVersion) (*Signature, error) {
 	switch bgv {
 	case cbnt.Version10:
-		s := &Signature{}
+		s := &Signature{StructInfo: cbnt.NewStructInfo(bgv)}
 		copy(s.StructInfo.(*cbnt.StructInfoBG).ID[:], []byte(StructureIDSignature))
 		s.StructInfo.(*cbnt.StructInfoBG).Version = 0x10
 		// Recursively initializing a child structure:
 		s.KeySignature = *cbnt.NewKeySignature()
 		return s, nil
 	case cbnt.Version20, cbnt.Version21:
-		s := &Signature{}
+		s := &Signature{StructInfo: cbnt.NewStructInfo(bgv)}
 		copy(s.StructInfo.(*cbnt.StructInfoCBNT).ID[:], []byte(StructureIDSignature))
 		s.StructInfo.(*cbnt.StructInfoCBNT).Version = 0x20
 		s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize = 0
@@ -107,8 +107,13 @@ func (s *Signature) SetStructInfo(newStructInfo cbnt.StructInfo) {
 	s.StructInfo = newStructInfo
 }
 
-// ReadFrom reads the Signature from 'r' in format defined in the document #575623.
+// Dummy helper to satisfy cbnt.Structure Interface
 func (s *Signature) ReadFrom(r io.Reader, info bool) (int64, error) {
+	return s.ReadFromHelper(r, true)
+}
+
+// ReadFrom reads the Signature from 'r' in format defined in the document #575623.
+func (s *Signature) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 	l := s.Layout()
 
 	if !info {

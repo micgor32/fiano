@@ -15,8 +15,8 @@ import (
 
 type Reserved struct {
 	cbnt.Common
-	StructInfo   `id:"__PFRS__" version:"0x21" var0:"0" var1:"uint16(s.TotalSize())"`
-	ReservedData [32]byte `json:"ReservedData"`
+	cbnt.StructInfoCBNT `id:"__PFRS__" version:"0x21" var0:"0" var1:"uint16(s.TotalSize())"`
+	ReservedData        [32]byte `json:"ReservedData"`
 }
 
 // NewReserved returns a new instance of Reserved with
@@ -24,8 +24,8 @@ type Reserved struct {
 func NewReserved() *Reserved {
 	// Only present in CBnT, thus we assume StructInfoCBNT.
 	s := &Reserved{}
-	copy(s.StructInfo.(*cbnt.StructInfoCBNT).ID[:], []byte(StructureIDReserved))
-	s.StructInfo.(*cbnt.StructInfoCBNT).Version = 0x21
+	copy(s.StructInfoCBNT.ID[:], []byte(StructureIDReserved))
+	s.StructInfoCBNT.Version = 0x21
 	s.Rehash()
 	return s
 }
@@ -42,8 +42,8 @@ func (s *Reserved) Layout() []cbnt.LayoutField {
 		{
 			ID:    0,
 			Name:  "Struct Info",
-			Size:  func() uint64 { return s.StructInfo.TotalSize() },
-			Value: func() any { return &s.StructInfo },
+			Size:  func() uint64 { return s.StructInfoCBNT.TotalSize() },
+			Value: func() any { return &s.StructInfoCBNT },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
@@ -83,7 +83,7 @@ const StructureIDReserved = "__PFRS__"
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
 func (s *Reserved) GetStructInfo() cbnt.StructInfo {
-	return s.StructInfo
+	return s.StructInfoCBNT
 }
 
 // SetStructInfo sets new value of StructInfo to the structure.
@@ -91,11 +91,16 @@ func (s *Reserved) GetStructInfo() cbnt.StructInfo {
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
 func (s *Reserved) SetStructInfo(newStructInfo cbnt.StructInfo) {
-	s.StructInfo = newStructInfo
+	s.StructInfoCBNT = newStructInfo.(cbnt.StructInfoCBNT)
+}
+
+// Dummy helper to comply with cbnt.Structure interface
+func (s *Reserved) ReadFrom(r io.Reader) (int64, error) {
+	return s.ReadFromHelper(r, true)
 }
 
 // ReadFrom reads the Reserved from 'r' in format defined in the document #575623.
-func (s *Reserved) ReadFrom(r io.Reader, info bool) (int64, error) {
+func (s *Reserved) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 	l := s.Layout()
 
 	if !info {
@@ -113,8 +118,8 @@ func (s *Reserved) RehashRecursive() {
 // Rehash sets values which are calculated automatically depending on the rest
 // data. It is usually about the total size field of an element.
 func (s *Reserved) Rehash() {
-	s.StructInfo.(*cbnt.StructInfoCBNT).Variable0 = 0
-	s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize = uint16(s.TotalSize())
+	s.StructInfoCBNT.Variable0 = 0
+	s.StructInfoCBNT.ElementSize = uint16(s.TotalSize())
 }
 
 // WriteTo writes the Reserved into 'w' in format defined in
@@ -125,7 +130,7 @@ func (s *Reserved) WriteTo(w io.Writer) (int64, error) {
 
 	// StructInfo (ManifestFieldType: structInfo)
 	{
-		n, err := s.StructInfo.WriteTo(w)
+		n, err := s.StructInfoCBNT.WriteTo(w)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
 		}
