@@ -250,13 +250,7 @@ func (s DummyLayout) Layout() []LayoutField {
 }
 
 type StructInfo interface {
-	ReadFrom(r io.Reader) (int64, error)
-	WriteTo(r io.Writer) (int64, error)
-	Layout() []LayoutField
-	SizeOf(id int) (uint64, error)
-	OffsetOf(id int) (uint64, error)
-	TotalSize() uint64
-	PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string
+	Structure
 	StructInfo() StructInfo
 }
 

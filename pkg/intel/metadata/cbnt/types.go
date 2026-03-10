@@ -42,16 +42,8 @@ type (
 	// Element is an abstraction of an element of a manifest.
 	Element interface {
 		Structure
-		ReadDataFrom(r io.Reader) (int64, error)
 		GetStructInfo() StructInfo
 		SetStructInfo(StructInfo)
-	}
-
-	// ElementsContainer is an abstraction of set of elements of a manifest (for
-	// example: the root structure of BPM).
-	ElementsContainer interface {
-		Structure
-		GetFieldByStructID(structID string) any
 	}
 
 	Manifest interface {
