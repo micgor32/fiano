@@ -5,6 +5,7 @@
 package cbnt
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -303,4 +304,119 @@ func (s *HashStructure) TotalSize() uint64 {
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *HashStructure) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return Common{}.PrettyString(depth, withHeader, s, "Hash Structure", opts...)
+}
+
+// HashStructureFill describes a digest in BG fill format.
+// Unlike HashStructure, HashBuffer does not carry a size prefix on the wire.
+type HashStructureFill struct {
+	Common
+	HashAlg    Algorithm `default:"0x0b" json:"hsAlg"`
+	HashBuffer []byte    `json:"hsBuffer"`
+}
+
+// NewHashStructureFill returns a new instance of HashStructureFill with
+// all default values set. Note: here only for legacy reasons (i.e. supporting
+// BG 1.0).
+func NewHashStructureFill(alg Algorithm) *HashStructureFill {
+	s := &HashStructureFill{}
+	s.HashAlg = alg
+	return s
+}
+
+func (s *HashStructureFill) hashBufferSize() uint64 {
+	hashSizeFieldLen := uint64(binary.Size(uint16(0)))
+	if s.HashAlg.IsNull() {
+		return uint64(sha256.Size) + hashSizeFieldLen
+	}
+	h, err := s.HashAlg.Hash()
+	if err != nil {
+		return hashSizeFieldLen
+	}
+	return uint64(h.Size()) + hashSizeFieldLen
+}
+
+// ReadFrom reads the HashStructureFill from 'r' in format defined in the document #575623.
+func (s *HashStructureFill) ReadFrom(r io.Reader) (int64, error) {
+	totalN, err := s.Common.ReadFrom(r, s)
+	if err != nil {
+		return 0, err
+	}
+
+	return totalN, nil
+}
+
+// WriteTo writes the HashStructureFill into 'w' in format defined in
+// the document #575623.
+func (s *HashStructureFill) WriteTo(w io.Writer) (int64, error) {
+	totalN := int64(0)
+
+	// HashAlg (ManifestFieldType: endValue)
+	{
+		n, err := 2, binary.Write(w, binary.LittleEndian, &s.HashAlg)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'HashAlg': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// HashBuffer (ManifestFieldType: arrayDynamic)
+	{
+		n, err := len(s.HashBuffer), binary.Write(w, binary.LittleEndian, s.HashBuffer)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'HashBuffer': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	return totalN, nil
+}
+
+func (s *HashStructureFill) Layout() []LayoutField {
+	return []LayoutField{
+		{
+			ID:    0,
+			Name:  "Hash Alg",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.HashAlg },
+			Type:  ManifestFieldEndValue,
+		},
+		{
+			ID:    1,
+			Name:  "Hash Buffer",
+			Size:  s.hashBufferSize,
+			Value: func() any { return &s.HashBuffer },
+			Type:  ManifestFieldArrayDynamicWithSize,
+		},
+	}
+}
+
+func (s *HashStructureFill) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashStructureFill: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *HashStructureFill) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("HashStructureFill: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *HashStructureFill) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	return s.Common.TotalSize(s)
+}
+
+// PrettyString returns the content of the structure in an easy-to-read format.
+func (s *HashStructureFill) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	return Common{}.PrettyString(depth, withHeader, s, "Hash Structure Fill", opts...)
 }
