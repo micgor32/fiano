@@ -7,10 +7,8 @@ package cbntkey
 import (
 	"crypto"
 	"fmt"
-	"io"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
-	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
 type Manifest interface {
@@ -21,16 +19,7 @@ type Manifest interface {
 		privKey crypto.Signer,
 		signedData []byte,
 	) error
-	Validate() error
-	GetStructInfo() cbnt.StructInfo
-	SetStructInfo(newStructInfo cbnt.StructInfo)
-	ReadFrom(r io.Reader) (int64, error)
-	WriteTo(w io.Writer) (int64, error)
-	SizeOf(id int) (uint64, error)
-	OffsetOf(id int) (uint64, error)
-	Layout() []cbnt.LayoutField
-	TotalSize() uint64
-	PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string
+	cbnt.Element
 	Print()
 }
 
