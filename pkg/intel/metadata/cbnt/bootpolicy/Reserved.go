@@ -22,9 +22,10 @@ type Reserved struct {
 // NewReserved returns a new instance of Reserved with
 // all default values set.
 func NewReserved() *Reserved {
+	// Only present in CBnT, thus we assume StructInfoCBNT.
 	s := &Reserved{}
-	copy(s.StructInfo.ID[:], []byte(StructureIDReserved))
-	s.StructInfo.Version = 0x21
+	copy(s.StructInfo.(*cbnt.StructInfoCBNT).ID[:], []byte(StructureIDReserved))
+	s.StructInfo.(*cbnt.StructInfoCBNT).Version = 0x21
 	s.Rehash()
 	return s
 }
@@ -94,43 +95,26 @@ func (s *Reserved) SetStructInfo(newStructInfo cbnt.StructInfo) {
 }
 
 // ReadFrom reads the Reserved from 'r' in format defined in the document #575623.
-func (s *Reserved) ReadFrom(r io.Reader) (int64, error) {
-	return s.Common.ReadFrom(r, s)
-}
+func (s *Reserved) ReadFrom(r io.Reader, info bool) (int64, error) {
+	l := s.Layout()
 
-// ReadDataFrom reads the Reserved from 'r' excluding StructInfo,
-// in format defined in the document #575623.
-func (s *Reserved) ReadDataFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		// ReadDataFrom does not read Struct, use ReadFrom for that.
+	if !info {
+		l = l[1:]
 	}
 
-	// ReservedData (ManifestFieldType: arrayStatic)
-	{
-		n, err := 32, binary.Read(r, binary.LittleEndian, s.ReservedData[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'ReservedData': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
 }
 
 // RehashRecursive calls Rehash (see below) recursively.
 func (s *Reserved) RehashRecursive() {
-	s.StructInfo.Rehash()
 	s.Rehash()
 }
 
 // Rehash sets values which are calculated automatically depending on the rest
 // data. It is usually about the total size field of an element.
 func (s *Reserved) Rehash() {
-	s.Variable0 = 0
-	s.ElementSize = uint16(s.TotalSize())
+	s.StructInfo.(*cbnt.StructInfoCBNT).Variable0 = 0
+	s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize = uint16(s.TotalSize())
 }
 
 // WriteTo writes the Reserved into 'w' in format defined in

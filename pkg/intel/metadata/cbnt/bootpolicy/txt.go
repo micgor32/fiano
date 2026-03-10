@@ -17,13 +17,13 @@ import (
 // TXT is the TXT element
 type TXT struct {
 	cbnt.Common
-	StructInfo      `id:"__TXTS__" version:"0x21" var0:"0" var1:"uint16(s.TotalSize())"`
-	Reserved0       [1]byte          `require:"0" json:"txtReserved0,omitempty"`
-	SetNumber       [1]byte          `require:"0" json:"txtSetNumer,omitempty"`
-	SInitMinSVNAuth uint8            `default:"0" json:"txtSVN"`
-	Reserved1       [1]byte          `require:"0" json:"txtReserved1,omitempty"`
-	ControlFlags    TXTControlFlags  `json:"txtFlags"`
-	PwrDownInterval Duration16In5Sec `json:"txtPwrDownInterval"`
+	cbnt.StructInfoCBNT `id:"__TXTS__" version:"0x21" var0:"0" var1:"uint16(s.TotalSize())"`
+	Reserved0           [1]byte          `require:"0" json:"txtReserved0,omitempty"`
+	SetNumber           [1]byte          `require:"0" json:"txtSetNumer,omitempty"`
+	SInitMinSVNAuth     uint8            `default:"0" json:"txtSVN"`
+	Reserved1           [1]byte          `require:"0" json:"txtReserved1,omitempty"`
+	ControlFlags        TXTControlFlags  `json:"txtFlags"`
+	PwrDownInterval     Duration16In5Sec `json:"txtPwrDownInterval"`
 	// PrettyString: PTT CMOS Offset 0
 	PTTCMOSOffset0 uint8 `default:"126" json:"txtPTTCMOSOffset0"`
 	// PrettyString: PTT CMOS Offset 1
@@ -42,8 +42,8 @@ type TXT struct {
 // all default values set.
 func NewTXT() *TXT {
 	s := &TXT{}
-	copy(s.StructInfo.ID[:], []byte(StructureIDTXT))
-	s.StructInfo.Version = 0x21
+	copy(s.StructInfoCBNT.ID[:], []byte(StructureIDTXT))
+	s.StructInfoCBNT.Version = 0x21
 	// Set through tag "default":
 	s.SInitMinSVNAuth = 0
 	// Set through tag "default":
@@ -106,8 +106,8 @@ func (s *TXT) Layout() []cbnt.LayoutField {
 		{
 			ID:    0,
 			Name:  "Struct Info",
-			Size:  func() uint64 { return s.StructInfo.TotalSize() },
-			Value: func() any { return &s.StructInfo },
+			Size:  func() uint64 { return s.StructInfoCBNT.TotalSize() },
+			Value: func() any { return &s.StructInfoCBNT },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
@@ -233,165 +233,31 @@ func (s *TXT) OffsetOf(id int) (uint64, error) {
 //
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
-func (s *TXT) GetStructInfo() cbnt.StructInfo {
-	return s.StructInfo
+func (s *TXT) GetStructInfo() cbnt.StructInfoCBNT {
+	return s.StructInfoCBNT
 }
 
 // SetStructInfo sets new value of StructInfo to the structure.
 //
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
-func (s *TXT) SetStructInfo(newStructInfo cbnt.StructInfo) {
-	s.StructInfo = newStructInfo
+func (s *TXT) SetStructInfo(newStructInfo cbnt.StructInfoCBNT) {
+	s.StructInfoCBNT = newStructInfo
 }
 
 // ReadFrom reads the TXT from 'r' in format defined in the document #575623.
-func (s *TXT) ReadFrom(r io.Reader) (int64, error) {
-	return s.Common.ReadFrom(r, s)
-}
+func (s *TXT) ReadFrom(r io.Reader, info bool) (int64, error) {
+	l := s.Layout()
 
-// ReadDataFrom reads the TXT from 'r' excluding StructInfo,
-// in format defined in the document #575623.
-func (s *TXT) ReadDataFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		// ReadDataFrom does not read Struct, use ReadFrom for that.
+	if !info {
+		l = l[1:]
 	}
 
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// SetNumber (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, s.SetNumber[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'SetNumber': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// SInitMinSVNAuth (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.SInitMinSVNAuth)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'SInitMinSVNAuth': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved1 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, s.Reserved1[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Reserved1': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ControlFlags (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Read(r, binary.LittleEndian, &s.ControlFlags)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'ControlFlags': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PwrDownInterval (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.PwrDownInterval)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'PwrDownInterval': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PTTCMOSOffset0 (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.PTTCMOSOffset0)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'PTTCMOSOffset0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PTTCMOSOffset1 (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.PTTCMOSOffset1)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'PTTCMOSOffset1': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ACPIBaseOffset (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, &s.ACPIBaseOffset)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'ACPIBaseOffset': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved2 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, s.Reserved2[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Reserved2': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PwrMBaseOffset (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Read(r, binary.LittleEndian, &s.PwrMBaseOffset)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'PwrMBaseOffset': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// DigestList (ManifestFieldType: subStruct)
-	{
-		n, err := s.DigestList.ReadFrom(r)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'DigestList': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved3 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 3, binary.Read(r, binary.LittleEndian, s.Reserved3[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Reserved3': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// SegmentCount (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.SegmentCount)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'SegmentCount': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
 }
 
 // RehashRecursive calls Rehash (see below) recursively.
 func (s *TXT) RehashRecursive() {
-	s.StructInfo.Rehash()
 	s.DigestList.Rehash()
 	s.Rehash()
 }
@@ -411,7 +277,7 @@ func (s *TXT) WriteTo(w io.Writer) (int64, error) {
 
 	// StructInfo (ManifestFieldType: structInfo)
 	{
-		n, err := s.StructInfo.WriteTo(w)
+		n, err := s.StructInfoCBNT.WriteTo(w)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
 		}

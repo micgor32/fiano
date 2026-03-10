@@ -26,8 +26,9 @@ type PCD struct {
 // all default values set.
 func NewPCD() *PCD {
 	s := &PCD{}
-	copy(s.StructInfo.ID[:], []byte(StructureIDPCD))
-	s.StructInfo.Version = 0x20
+	// TODO: same as with manifest
+	copy(s.StructInfo.(*cbnt.StructInfoCBNT).ID[:], []byte(StructureIDPCD))
+	s.StructInfo.(*cbnt.StructInfoCBNT).Version = 0x20
 	s.Rehash()
 	return s
 }
@@ -69,11 +70,11 @@ func (s *PCD) Layout() []cbnt.LayoutField {
 				if size == 0 && len(s.Data) != 0 {
 					size = uint16(len(s.Data))
 				}
-				if s.ElementSize != 0 {
+				if s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize != 0 {
 					base := s.StructInfo.TotalSize() + 2 + 2
 					guessedSize := base + uint64(size)
-					if guessedSize != uint64(s.ElementSize) {
-						size = s.ElementSize - uint16(s.StructInfo.TotalSize()) - 2 - 2
+					if guessedSize != uint64(s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize) {
+						size = s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize - uint16(s.StructInfo.TotalSize()) - 2 - 2
 					}
 				}
 				return uint64(size)
@@ -119,74 +120,27 @@ func (s *PCD) SetStructInfo(newStructInfo cbnt.StructInfo) {
 }
 
 // ReadFrom reads the PCD from 'r' in format defined in the document #575623.
-func (s *PCD) ReadFrom(r io.Reader) (int64, error) {
-	return s.Common.ReadFrom(r, s)
-}
+func (s *PCD) ReadFrom(r io.Reader, info bool) (int64, error) {
+	l := s.Layout()
 
-// ReadDataFrom reads the PCD from 'r' excluding StructInfo,
-// in format defined in the document #575623.
-func (s *PCD) ReadDataFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		// ReadDataFrom does not read Struct, use ReadFrom for that.
+	if !info {
+		l = l[1:]
 	}
 
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
+	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
 
-	// Data (ManifestFieldType: arrayDynamic)
-	{
-		var size uint16
-		err := binary.Read(r, binary.LittleEndian, &s.SizeOfData)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to the read size of field 'Data': %w", err)
-		}
-
-		// FIXUP: The issue is that size is only the size of the first element. If Header Size + size != Total Size
-		// We have to manually calculate this
-		size = binary.LittleEndian.Uint16(s.SizeOfData[:])
-		infoSize, _ := s.SizeOf(0)
-		reservedSize, _ := s.SizeOf(1)
-		guessedSize := infoSize
-		guessedSize += reservedSize
-		guessedSize += 2
-		guessedSize += uint64(size)
-
-		if guessedSize != uint64(s.ElementSize) {
-			size = s.ElementSize - uint16(infoSize) - 2 - 2 // 2 for Reserved0, 2 for Size Field
-		}
-
-		totalN += int64(binary.Size(size))
-		s.Data = make([]byte, size)
-		n, err := len(s.Data), binary.Read(r, binary.LittleEndian, s.Data)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Data': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
 }
 
 // RehashRecursive calls Rehash (see below) recursively.
 func (s *PCD) RehashRecursive() {
-	s.StructInfo.Rehash()
 	s.Rehash()
 }
 
 // Rehash sets values which are calculated automatically depending on the rest
 // data. It is usually about the total size field of an element.
 func (s *PCD) Rehash() {
-	s.Variable0 = 0
-	s.ElementSize = uint16(s.TotalSize())
+	s.StructInfo.(*cbnt.StructInfoCBNT).Variable0 = 0
+	s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize = uint16(s.TotalSize())
 }
 
 // WriteTo writes the PCD into 'w' in format defined in
@@ -237,8 +191,8 @@ func (s *PCD) TotalSize() uint64 {
 		return 0
 	}
 
-	if s.ElementSize != 0 {
-		return uint64(s.ElementSize)
+	if s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize != 0 {
+		return uint64(s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize)
 	}
 
 	return s.Common.TotalSize(s)

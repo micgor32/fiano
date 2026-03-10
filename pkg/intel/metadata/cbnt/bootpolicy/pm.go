@@ -13,26 +13,41 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
-type PM struct {
-	cbnt.Common
-	StructInfo `id:"__PMDA__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
-	Reserved0  [2]byte `require:"0" json:"pcReserved0,omitempty"`
-	Data       []byte  `json:"pcData"`
+type PM interface {
+	cbnt.Structure
 }
 
 // NewPM returns a new instance of PM with
 // all default values set.
-func NewPM() *PM {
-	s := &PM{}
-	copy(s.StructInfo.ID[:], []byte(StructureIDPM))
-	s.StructInfo.Version = 0x20
-	s.Rehash()
-	return s
+func NewPM(bgv cbnt.BootGuardVersion) (PM, error) {
+	switch bgv {
+	case cbnt.Version10:
+		s := &PMBG{}
+		copy(s.StructInfoBG.ID[:], []byte(StructureIDPM))
+		s.StructInfoBG.Version = 0x10
+		return s, nil
+	case cbnt.Version20, cbnt.Version21:
+		s := &PMCBnT{}
+		copy(s.StructInfoCBNT.ID[:], []byte(StructureIDPM))
+		s.StructInfoCBNT.Version = 0x20
+		s.Rehash()
+		return s, nil
+	default:
+		return nil, fmt.Errorf("version not supported")
+	}
+}
+
+type PMCBnT struct {
+	cbnt.Common
+	cbnt.StructInfoCBNT `id:"__PMDA__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
+	Reserved0           [2]byte `require:"0" json:"pcReserved0,omitempty"`
+	DataSize            [2]byte `json:"pcDataSize"`
+	Data                []byte  `json:"pcData"`
 }
 
 // Validate (recursively) checks the structure if there are any unexpected
 // values. It returns an error if so.
-func (s *PM) Validate() error {
+func (s *PMCBnT) Validate() error {
 	// See tag "require"
 	for idx := range s.Reserved0 {
 		if s.Reserved0[idx] != 0 {
@@ -43,13 +58,13 @@ func (s *PM) Validate() error {
 	return nil
 }
 
-func (s *PM) Layout() []cbnt.LayoutField {
+func (s *PMCBnT) Layout() []cbnt.LayoutField {
 	return []cbnt.LayoutField{
 		{
 			ID:    0,
 			Name:  "Struct Info",
-			Size:  func() uint64 { return s.StructInfo.TotalSize() },
-			Value: func() any { return &s.StructInfo },
+			Size:  func() uint64 { return s.StructInfoCBNT.TotalSize() },
+			Value: func() any { return &s.StructInfoCBNT },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
@@ -60,11 +75,20 @@ func (s *PM) Layout() []cbnt.LayoutField {
 			Type:  cbnt.ManifestFieldArrayStatic,
 		},
 		{
-			ID:   2,
+			ID:    2,
+			Name:  "Data Size",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.DataSize },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:   3,
 			Name: "Data",
 			Size: func() uint64 {
+				// TODO: verify
 				size := uint64(binary.Size(uint16(0)))
-				size += uint64(len(s.Data))
+				size += uint64(s.DataSize[0])
+				size += uint64(s.DataSize[1])
 				return size
 			},
 			Value: func() any { return &s.Data },
@@ -73,7 +97,7 @@ func (s *PM) Layout() []cbnt.LayoutField {
 	}
 }
 
-func (s *PM) SizeOf(id int) (uint64, error) {
+func (s *PMCBnT) SizeOf(id int) (uint64, error) {
 	ret, err := s.Common.SizeOf(s, id)
 	if err != nil {
 		return ret, fmt.Errorf("PM: %v", err)
@@ -82,7 +106,7 @@ func (s *PM) SizeOf(id int) (uint64, error) {
 	return ret, nil
 }
 
-func (s *PM) OffsetOf(id int) (uint64, error) {
+func (s *PMCBnT) OffsetOf(id int) (uint64, error) {
 	ret, err := s.Common.OffsetOf(s, id)
 	if err != nil {
 		return ret, fmt.Errorf("PM: %v", err)
@@ -95,83 +119,56 @@ func (s *PM) OffsetOf(id int) (uint64, error) {
 //
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
-func (s *PM) GetStructInfo() cbnt.StructInfo {
-	return s.StructInfo
+func (s *PMCBnT) GetStructInfo() cbnt.StructInfo {
+	return s.StructInfoCBNT
 }
 
 // SetStructInfo sets new value of StructInfo to the structure.
 //
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
-func (s *PM) SetStructInfo(newStructInfo cbnt.StructInfo) {
-	s.StructInfo = newStructInfo
+func (s *PMCBnT) SetStructInfo(newStructInfo cbnt.StructInfoCBNT) {
+	s.StructInfoCBNT = newStructInfo
+}
+
+// Has to be here to fullfil Structure interface requirements.
+// Reads the whole data.
+func (s *PMCBnT) ReadFrom(r io.Reader) (int64, error) {
+	return s.ReadFromHelper(r, true)
 }
 
 // ReadFrom reads the PM from 'r' in format defined in the document #575623.
-func (s *PM) ReadFrom(r io.Reader) (int64, error) {
-	return s.Common.ReadFrom(r, s)
-}
+func (s *PMCBnT) ReadFromHelper(r io.Reader, info bool) (int64, error) {
+	l := s.Layout()
 
-// ReadDataFrom reads the PM from 'r' excluding StructInfo,
-// in format defined in the document #575623.
-func (s *PM) ReadDataFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		// ReadDataFrom does not read Struct, use ReadFrom for that.
+	if !info {
+		l = l[1:]
 	}
 
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 2, binary.Read(r, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Data (ManifestFieldType: arrayDynamic)
-	{
-		var size uint16
-		err := binary.Read(r, binary.LittleEndian, &size)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to the read size of field 'Data': %w", err)
-		}
-		totalN += int64(binary.Size(size))
-		s.Data = make([]byte, size)
-		n, err := len(s.Data), binary.Read(r, binary.LittleEndian, s.Data)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Data': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
 }
 
 // RehashRecursive calls Rehash (see below) recursively.
-func (s *PM) RehashRecursive() {
-	s.StructInfo.Rehash()
+func (s *PMCBnT) RehashRecursive() {
 	s.Rehash()
 }
 
 // Rehash sets values which are calculated automatically depending on the rest
 // data. It is usually about the total size field of an element.
-func (s *PM) Rehash() {
+func (s *PMCBnT) Rehash() {
 	s.Variable0 = 0
-	s.ElementSize = uint16(s.TotalSize())
+	s.ElementSize = uint16(s.Common.TotalSize(s))
 }
 
 // WriteTo writes the PM into 'w' in format defined in
 // the document #575623.
-func (s *PM) WriteTo(w io.Writer) (int64, error) {
+func (s *PMCBnT) WriteTo(w io.Writer) (int64, error) {
 	totalN := int64(0)
 	s.Rehash()
 
 	// StructInfo (ManifestFieldType: structInfo)
 	{
-		n, err := s.StructInfo.WriteTo(w)
+		n, err := s.StructInfoCBNT.WriteTo(w)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
 		}
@@ -183,6 +180,144 @@ func (s *PM) WriteTo(w io.Writer) (int64, error) {
 		n, err := 2, binary.Write(w, binary.LittleEndian, s.Reserved0[:])
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'Reserved0': %w", err)
+		}
+		totalN += int64(n)
+	}
+	// DUMMY, replace once WriteTo is generic as well
+	// Reserved0 (ManifestFieldType: arrayStatic)
+	{
+		n, err := 2, binary.Write(w, binary.LittleEndian, s.DataSize[:])
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'DataSize': %w", err)
+		}
+		totalN += int64(n)
+	}
+	// Data (ManifestFieldType: arrayDynamic)
+	{
+		size := uint16(len(s.Data))
+		err := binary.Write(w, binary.LittleEndian, size)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write the size of field 'Data': %w", err)
+		}
+		totalN += int64(binary.Size(size))
+		n, err := len(s.Data), binary.Write(w, binary.LittleEndian, s.Data)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'Data': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	return totalN, nil
+}
+
+// Size returns the total size of the PM.
+func (s *PMCBnT) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	return s.Common.TotalSize(s)
+}
+
+// PrettyString returns the content of the structure in an easy-to-read format.
+func (s *PMCBnT) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	return s.Common.PrettyString(depth, withHeader, s, "PM", opts...)
+}
+
+type PMBG struct {
+	cbnt.StructInfoBG `id:"__PMDA__" version:"0x10"`
+	DataSize          uint16 `json:"pcDataSize"`
+	Data              []byte `json:"pcData"`
+}
+
+func (s *PMBG) Layout() []cbnt.LayoutField {
+	return []cbnt.LayoutField{
+		{
+			ID:    0,
+			Name:  "Struct Info",
+			Size:  func() uint64 { return s.StructInfoBG.TotalSize() },
+			Value: func() any { return &s.StructInfoBG },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    1,
+			Name:  "Data Size",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.DataSize },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:   1,
+			Name: "Data",
+			Size: func() uint64 {
+				// TODO: verify
+				size := uint64(binary.Size(uint16(0)))
+				size += uint64(s.DataSize)
+				return size
+			},
+			Value: func() any { return &s.Data },
+			Type:  cbnt.ManifestFieldArrayDynamicWithPrefix,
+		},
+	}
+}
+
+func (s *PMBG) Validate() error {
+	// dummy
+	return nil
+}
+
+// GetStructInfo returns current value of StructInfo of the structure.
+//
+// StructInfo is a set of standard fields with presented in any element
+// ("element" in terms of document #575623).
+func (s *PMBG) GetStructInfo() cbnt.StructInfo {
+	return s.StructInfoBG
+}
+
+// SetStructInfo sets new value of StructInfo to the structure.
+//
+// StructInfo is a set of standard fields with presented in any element
+// ("element" in terms of document #575623).
+func (s *PMBG) SetStructInfo(newStructInfo cbnt.StructInfo) {
+	s.StructInfoBG = newStructInfo.(cbnt.StructInfoBG)
+}
+
+// Has to be here to fullfil Structure interface requirements.
+// Reads the whole data.
+func (s *PMBG) ReadFrom(r io.Reader) (int64, error) {
+	return s.ReadFromHelper(r, true)
+}
+
+// ReadFrom reads the PM from 'r' in format defined in the document #575623.
+func (s *PMBG) ReadFromHelper(r io.Reader, info bool) (int64, error) {
+	l := s.Layout()
+
+	if !info {
+		l = l[1:]
+	}
+
+	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
+}
+
+// WriteTo writes the PM into 'w' in format defined in
+// the document #575623.
+func (s *PMBG) WriteTo(w io.Writer) (int64, error) {
+	totalN := int64(0)
+
+	// StructInfo (ManifestFieldType: structInfo)
+	{
+		n, err := s.StructInfoBG.WriteTo(w)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// DataSize (ManifestFieldType: endValue)
+	{
+		n, err := 2, binary.Write(w, binary.LittleEndian, &s.DataSize)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'DataSize': %w", err)
 		}
 		totalN += int64(n)
 	}
@@ -205,8 +340,26 @@ func (s *PM) WriteTo(w io.Writer) (int64, error) {
 	return totalN, nil
 }
 
+func (s *PMBG) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("PM: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *PMBG) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("PM: %v", err)
+	}
+
+	return ret, nil
+}
+
 // Size returns the total size of the PM.
-func (s *PM) TotalSize() uint64 {
+func (s *PMBG) TotalSize() uint64 {
 	if s == nil {
 		return 0
 	}
@@ -215,6 +368,6 @@ func (s *PM) TotalSize() uint64 {
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
-func (s *PM) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+func (s *PMBG) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return s.Common.PrettyString(depth, withHeader, s, "PM", opts...)
 }

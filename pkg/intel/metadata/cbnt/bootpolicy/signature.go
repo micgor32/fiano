@@ -14,20 +14,33 @@ import (
 
 type Signature struct {
 	cbnt.Common
-	StructInfo        `id:"__PMSG__" version:"0x20" var0:"0" var1:"0"`
+	cbnt.StructInfo   `id:"__PMSG__" version:"0x20"`
 	cbnt.KeySignature `json:"sigKeySignature"`
 }
 
 // NewSignature returns a new instance of Signature with
 // all default values set.
-func NewSignature() *Signature {
-	s := &Signature{}
-	copy(s.StructInfo.ID[:], []byte(StructureIDSignature))
-	s.StructInfo.Version = 0x20
-	// Recursively initializing a child structure:
-	s.KeySignature = *cbnt.NewKeySignature()
-	s.Rehash()
-	return s
+func NewSignature(bgv cbnt.BootGuardVersion) (*Signature, error) {
+	switch bgv {
+	case cbnt.Version10:
+		s := &Signature{}
+		copy(s.StructInfo.(*cbnt.StructInfoBG).ID[:], []byte(StructureIDSignature))
+		s.StructInfo.(*cbnt.StructInfoBG).Version = 0x10
+		// Recursively initializing a child structure:
+		s.KeySignature = *cbnt.NewKeySignature()
+		return s, nil
+	case cbnt.Version20, cbnt.Version21:
+		s := &Signature{}
+		copy(s.StructInfo.(*cbnt.StructInfoCBNT).ID[:], []byte(StructureIDSignature))
+		s.StructInfo.(*cbnt.StructInfoCBNT).Version = 0x20
+		s.StructInfo.(*cbnt.StructInfoCBNT).ElementSize = 0
+		s.StructInfo.(*cbnt.StructInfoCBNT).Variable0 = 0
+		// Recursively initializing a child structure:
+		s.KeySignature = *cbnt.NewKeySignature()
+		return s, nil
+	default:
+		return nil, fmt.Errorf("version not supported")
+	}
 }
 
 // Validate (recursively) checks the structure if there are any unexpected
@@ -95,44 +108,20 @@ func (s *Signature) SetStructInfo(newStructInfo cbnt.StructInfo) {
 }
 
 // ReadFrom reads the Signature from 'r' in format defined in the document #575623.
-func (s *Signature) ReadFrom(r io.Reader) (int64, error) {
-	return s.Common.ReadFrom(r, s)
-}
+func (s *Signature) ReadFrom(r io.Reader, info bool) (int64, error) {
+	l := s.Layout()
 
-// ReadDataFrom reads the Signature from 'r' excluding StructInfo,
-// in format defined in the document #575623.
-func (s *Signature) ReadDataFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		// ReadDataFrom does not read Struct, use ReadFrom for that.
+	if !info {
+		l = l[1:]
 	}
 
-	// KeySignature (ManifestFieldType: subStruct)
-	{
-		n, err := s.KeySignature.ReadFrom(r)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'KeySignature': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
 }
 
 // RehashRecursive calls Rehash (see below) recursively.
 func (s *Signature) RehashRecursive() {
-	s.StructInfo.Rehash()
 	s.KeySignature.Rehash()
 	s.Rehash()
-}
-
-// Rehash sets values which are calculated automatically depending on the rest
-// data. It is usually about the total size field of an element.
-func (s *Signature) Rehash() {
-	s.Variable0 = 0
-	s.ElementSize = 0
 }
 
 // WriteTo writes the Signature into 'w' in format defined in

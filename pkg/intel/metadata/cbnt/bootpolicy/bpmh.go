@@ -1,4 +1,4 @@
-// Copyright 2017-2021 the LinuxBoot Authors. All rights reserved
+// Copyright 2017-2026 the LinuxBoot Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -16,10 +16,40 @@ import (
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
 
+type BPMH interface {
+	cbnt.Structure
+}
+
+// NewBPMH returns a new instance of BPMH with
+// all default values set.
+func NewBPMH(bgv cbnt.BootGuardVersion) (BPMH, error) {
+	switch bgv {
+	case cbnt.Version10:
+		s := &BPMHBG{}
+		copy(s.StructInfoBG.ID[:], []byte(StructureIDBPMH))
+		s.StructInfoBG.Version = 0x10
+		return s, nil
+	case cbnt.Version20:
+		s := &BPMHCBnT{}
+		copy(s.StructInfoCBNT.ID[:], []byte(StructureIDBPMH))
+		s.StructInfoCBNT.Version = 0x23
+		s.Rehash()
+		return s, nil
+	case cbnt.Version21:
+		s := &BPMHCBnT{}
+		copy(s.StructInfoCBNT.ID[:], []byte(StructureIDBPMH))
+		s.StructInfoCBNT.Version = 0x24
+		s.Rehash()
+		return s, nil
+	default:
+		return nil, fmt.Errorf("version not supported")
+	}
+}
+
 // BPMH is the header of boot policy manifest
-type BPMH struct {
+type BPMHCBnT struct {
 	cbnt.Common
-	StructInfo `id:"__ACBP__" version:"0x23" var0:"0x20" var1:"uint16(s.TotalSize())"`
+	cbnt.StructInfoCBNT `id:"__ACBP__" version:"0x23" var0:"0x20" var1:"uint16(s.TotalSize())"`
 
 	KeySignatureOffset uint16 `json:"bpmhKeySignatureOffset"`
 
@@ -40,23 +70,13 @@ type BPMH struct {
 	NEMDataStack Size4K `json:"bpmhNEMStackSize"`
 }
 
-// NewBPMH returns a new instance of BPMH with
-// all default values set.
-func NewBPMH() *BPMH {
-	s := &BPMH{}
-	copy(s.StructInfo.ID[:], []byte(StructureIDBPMH))
-	s.StructInfo.Version = 0x23
-	s.Rehash()
-	return s
-}
-
-func (s *BPMH) Layout() []cbnt.LayoutField {
+func (s *BPMHCBnT) Layout() []cbnt.LayoutField {
 	return []cbnt.LayoutField{
 		{
 			ID:    0,
 			Name:  "Struct Info",
-			Size:  func() uint64 { return s.StructInfo.TotalSize() },
-			Value: func() any { return &s.StructInfo },
+			Size:  func() uint64 { return s.StructInfoCBNT.TotalSize() },
+			Value: func() any { return &s.StructInfoCBNT },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
@@ -104,7 +124,7 @@ func (s *BPMH) Layout() []cbnt.LayoutField {
 	}
 }
 
-func (s *BPMH) SizeOf(id int) (uint64, error) {
+func (s *BPMHCBnT) SizeOf(id int) (uint64, error) {
 	ret, err := s.Common.SizeOf(s, id)
 	if err != nil {
 		return ret, fmt.Errorf("BPMH: %v", err)
@@ -113,7 +133,7 @@ func (s *BPMH) SizeOf(id int) (uint64, error) {
 	return ret, nil
 }
 
-func (s *BPMH) OffsetOf(id int) (uint64, error) {
+func (s *BPMHCBnT) OffsetOf(id int) (uint64, error) {
 	ret, err := s.Common.OffsetOf(s, id)
 	if err != nil {
 		return ret, fmt.Errorf("BPMH: %v", err)
@@ -124,7 +144,7 @@ func (s *BPMH) OffsetOf(id int) (uint64, error) {
 
 // Validate (recursively) checks the structure if there are any unexpected
 // values. It returns an error if so.
-func (s *BPMH) Validate() error {
+func (s *BPMHCBnT) Validate() error {
 	// See tag "require"
 	for idx := range s.Reserved0 {
 		if s.Reserved0[idx] != 0 {
@@ -139,63 +159,56 @@ func (s *BPMH) Validate() error {
 //
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
-func (s *BPMH) GetStructInfo() cbnt.StructInfo {
-	return s.StructInfo
+func (s *BPMHCBnT) GetStructInfo() cbnt.StructInfo {
+	return s.StructInfoCBNT
 }
 
 // SetStructInfo sets new value of StructInfo to the structure.
 //
 // StructInfo is a set of standard fields with presented in any element
 // ("element" in terms of document #575623).
-func (s *BPMH) SetStructInfo(newStructInfo cbnt.StructInfo) {
-	s.StructInfo = newStructInfo
+func (s *BPMHCBnT) SetStructInfo(newStructInfo cbnt.StructInfo) {
+	s.StructInfoCBNT = newStructInfo.(cbnt.StructInfoCBNT)
 }
 
-// Okay this might seem bit hacky: we use dummy type that just
-// implements LayoutProvider, and based on info value passes
-// either full BPMH Layout or BPMH Layout - StructInfo. Not ideal
-// but spares 60 lines of boilerplate code.
-type dummyLayout struct {
-	fields []cbnt.LayoutField
-}
-
-func (s dummyLayout) Layout() []cbnt.LayoutField {
-	return s.fields
+// Has to be here to fullfil Structure interface requirements.
+// Reads the whole data.
+func (s *BPMHCBnT) ReadFrom(r io.Reader) (int64, error) {
+	return s.ReadFromHelper(r, true)
 }
 
 // ReadFrom reads the BPMH from 'r' in format defined in the document #575623.
-func (s *BPMH) ReadFrom(r io.Reader, info bool) (int64, error) {
+func (s *BPMHCBnT) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 	l := s.Layout()
 
 	if !info {
 		l = l[1:]
 	}
 
-	return s.Common.ReadFrom(r, dummyLayout{fields: l})
+	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
 }
 
 // RehashRecursive calls Rehash (see below) recursively.
-func (s *BPMH) RehashRecursive() {
-	s.StructInfo.Rehash()
+func (s *BPMHCBnT) RehashRecursive() {
 	s.Rehash()
 }
 
 // Rehash sets values which are calculated automatically depending on the rest
 // data. It is usually about the total size field of an element.
-func (s *BPMH) Rehash() {
-	s.Variable0 = 0x20
-	s.ElementSize = uint16(s.TotalSize())
+func (s *BPMHCBnT) Rehash() {
+	s.StructInfoCBNT.Variable0 = 0x20
+	s.StructInfoCBNT.ElementSize = uint16(s.Common.TotalSize(s))
 }
 
 // WriteTo writes the BPMH into 'w' in format defined in
 // the document #575623.
-func (s *BPMH) WriteTo(w io.Writer) (int64, error) {
+func (s *BPMHCBnT) WriteTo(w io.Writer) (int64, error) {
 	totalN := int64(0)
 	s.Rehash()
 
 	// StructInfo (ManifestFieldType: structInfo)
 	{
-		n, err := s.StructInfo.WriteTo(w)
+		n, err := s.StructInfoCBNT.WriteTo(w)
 		if err != nil {
 			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
 		}
@@ -260,7 +273,7 @@ func (s *BPMH) WriteTo(w io.Writer) (int64, error) {
 }
 
 // Size returns the total size of the BPMH.
-func (s *BPMH) TotalSize() uint64 {
+func (s *BPMHCBnT) TotalSize() uint64 {
 	if s == nil {
 		return 0
 	}
@@ -269,7 +282,226 @@ func (s *BPMH) TotalSize() uint64 {
 }
 
 // PrettyString returns the content of the structure in an easy-to-read format.
-func (s *BPMH) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+func (s *BPMHCBnT) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
+	return s.Common.PrettyString(depth, withHeader, s, "BPMH", opts...)
+}
+
+type BPMHBG struct {
+	cbnt.StructInfoBG `id:"__ACBP__" version:"0x10"`
+
+	HdrStructVersion uint8 `json:"HdrStructVersion"`
+
+	PMBPMVersion uint8 `json:"bpmhRevision"`
+
+	// PrettyString: BPM SVN
+	BPMSVN cbnt.SVN `json:"bpmhSNV"`
+	// PrettyString: ACM SVN Auth
+	ACMSVNAuth cbnt.SVN `json:"bpmhACMSVN"`
+
+	Reserved0 [1]byte `require:"0" json:"bpmhReserved0,omitempty"`
+
+	NEMDataStack Size4K `json:"bpmhNEMStackSize"`
+}
+
+func (s *BPMHBG) Layout() []cbnt.LayoutField {
+	return []cbnt.LayoutField{
+		{
+			ID:    0,
+			Name:  "Struct Info",
+			Size:  func() uint64 { return s.StructInfoBG.TotalSize() },
+			Value: func() any { return &s.StructInfoBG },
+			Type:  cbnt.ManifestFieldSubStruct,
+		},
+		{
+			ID:    1,
+			Name:  "Hdr Structure Version",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.HdrStructVersion },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    2,
+			Name:  "PMBPM Version",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.PMBPMVersion },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    3,
+			Name:  "BPM SVN",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.BPMSVN },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    4,
+			Name:  "ACM SVN Auth",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.ACMSVNAuth },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+		{
+			ID:    5,
+			Name:  "Reserved 0",
+			Size:  func() uint64 { return 1 },
+			Value: func() any { return &s.Reserved0 },
+			Type:  cbnt.ManifestFieldArrayStatic,
+		},
+		{
+			ID:    6,
+			Name:  "NEM Data Stack",
+			Size:  func() uint64 { return 2 },
+			Value: func() any { return &s.NEMDataStack },
+			Type:  cbnt.ManifestFieldEndValue,
+		},
+	}
+}
+
+func (s *BPMHBG) SizeOf(id int) (uint64, error) {
+	ret, err := s.Common.SizeOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("BPMH: %v", err)
+	}
+
+	return ret, nil
+}
+
+func (s *BPMHBG) OffsetOf(id int) (uint64, error) {
+	ret, err := s.Common.OffsetOf(s, id)
+	if err != nil {
+		return ret, fmt.Errorf("BPMH: %v", err)
+	}
+
+	return ret, nil
+}
+
+// Validate (recursively) checks the structure if there are any unexpected
+// values. It returns an error if so.
+func (s *BPMHBG) Validate() error {
+	for idx := range s.Reserved0 {
+		if s.Reserved0[idx] != 0 {
+			return fmt.Errorf("'Reserved0[%d]' is expected to be 0, but it is %v", idx, s.Reserved0[idx])
+		}
+	}
+
+	return nil
+}
+
+// GetStructInfo returns current value of StructInfo of the structure.
+//
+// StructInfo is a set of standard fields with presented in any element
+// ("element" in terms of document #575623).
+func (s *BPMHBG) GetStructInfo() cbnt.StructInfo {
+	return s.StructInfoBG
+}
+
+// SetStructInfo sets new value of StructInfo to the structure.
+//
+// StructInfo is a set of standard fields with presented in any element
+// ("element" in terms of document #575623).
+func (s *BPMHBG) SetStructInfo(newStructInfo cbnt.StructInfo) {
+	s.StructInfoBG = newStructInfo.(cbnt.StructInfoBG)
+}
+
+// Has to be here to fullfil Structure interface requirements.
+// Reads the whole data.
+func (s *BPMHBG) ReadFrom(r io.Reader) (int64, error) {
+	return s.ReadFromHelper(r, true)
+}
+
+// ReadFrom reads the BPMH from 'r' in format defined in the document #575623.
+func (s *BPMHBG) ReadFromHelper(r io.Reader, info bool) (int64, error) {
+	l := s.Layout()
+
+	if !info {
+		l = l[1:]
+	}
+
+	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
+}
+
+// WriteTo writes the BPMH into 'w' in format defined in
+// the document #575623.
+func (s *BPMHBG) WriteTo(w io.Writer) (int64, error) {
+	totalN := int64(0)
+
+	// StructInfo (ManifestFieldType: structInfo)
+	{
+		n, err := s.StructInfoBG.WriteTo(w)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// HdrStructVersion (ManifestFieldType: endValue)
+	{
+		n, err := 1, binary.Write(w, binary.LittleEndian, &s.HdrStructVersion)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'HdrStructVersion': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// PMBPMVersion (ManifestFieldType: endValue)
+	{
+		n, err := 1, binary.Write(w, binary.LittleEndian, &s.PMBPMVersion)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'PMBPMVersion': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// BPMSVN (ManifestFieldType: endValue)
+	{
+		n, err := 1, binary.Write(w, binary.LittleEndian, &s.BPMSVN)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'BPMSVN': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// ACMSVNAuth (ManifestFieldType: endValue)
+	{
+		n, err := 1, binary.Write(w, binary.LittleEndian, &s.ACMSVNAuth)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'ACMSVNAuth': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// Reserved0 (ManifestFieldType: arrayStatic)
+	{
+		n, err := 1, binary.Write(w, binary.LittleEndian, s.Reserved0[:])
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'Reserved0': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	// NEMDataStack (ManifestFieldType: endValue)
+	{
+		n, err := 2, binary.Write(w, binary.LittleEndian, &s.NEMDataStack)
+		if err != nil {
+			return totalN, fmt.Errorf("unable to write field 'NEMDataStack': %w", err)
+		}
+		totalN += int64(n)
+	}
+
+	return totalN, nil
+}
+
+// Size returns the total size of the BPMH.
+func (s *BPMHBG) TotalSize() uint64 {
+	if s == nil {
+		return 0
+	}
+
+	return s.Common.TotalSize(s)
+}
+
+// PrettyString returns the content of the structure in an easy-to-read format.
+func (s *BPMHBG) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
 	return s.Common.PrettyString(depth, withHeader, s, "BPMH", opts...)
 }
 
