@@ -34,6 +34,11 @@ func (s StructInfoCBNT) ReadFrom(r io.Reader) (int64, error) {
 	return totalN, nil
 }
 
+func (s StructInfoCBNT) Validate() error {
+	// dummy
+	return nil
+}
+
 // WriteTo writes the StructInfo into 'w' in format defined in
 // the document #575623.
 func (s StructInfoCBNT) WriteTo(w io.Writer) (int64, error) {
