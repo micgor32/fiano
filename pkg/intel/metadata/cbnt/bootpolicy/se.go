@@ -222,9 +222,9 @@ func NewSE(bgv cbnt.BootGuardVersion) (SE, error) {
 		copy(s.StructInfoBG.ID[:], []byte(StructureIDSE))
 		s.StructInfoBG.Version = 0x10
 		// Recursively initializing a child structure:
-		s.PostIBBHash = *cbnt.NewHashStructure(cbnt.Algorithm(hashAlg))
+		s.PostIBBHash = *cbnt.NewHashStructureFill(cbnt.Algorithm(hashAlg))
 		// Recursively initializing a child structure:
-		s.Digest = *cbnt.NewHashStructure(cbnt.Algorithm(hashAlg))
+		s.Digest = *cbnt.NewHashStructureFill(cbnt.Algorithm(hashAlg))
 		return s, nil
 	case cbnt.Version20, cbnt.Version21:
 		s := &SECBnT{}
@@ -730,11 +730,11 @@ type SEBG struct {
 	// PrettyString: DMA Protection 2 Limit Address
 	Reserved3 [8]byte `json:"seDMAProtLimit1"`
 
-	PostIBBHash cbnt.HashStructure `json:"sePostIBBHash"`
+	PostIBBHash cbnt.HashStructureFill `json:"sePostIBBHash"`
 
 	IBBEntryPoint uint32 `json:"seIBBEntry"`
 
-	Digest cbnt.HashStructure `json:"seDigestList"`
+	Digest cbnt.HashStructureFill `json:"seDigestList"`
 
 	IBBSegments []IBBSegment `countType:"uint8" json:"seIBBSegments,omitempty"`
 }
@@ -901,12 +901,6 @@ func (s *SEBG) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 	}
 
 	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
-}
-
-// RehashRecursive calls Rehash (see below) recursively.
-func (s *SEBG) RehashRecursive() {
-	s.PostIBBHash.Rehash()
-	s.Digest.Rehash()
 }
 
 // WriteTo writes the SE into 'w' in format defined in

@@ -16,13 +16,13 @@ func TestReadWriteBG(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	unittest.ManifestReadWrite(t, m, "testdata/bpm-bg.bin")
+	unittest.ManifestReadWrite(t, m, "testdata/bpm10.bin")
 }
 
-// func TestReadWriteCBNT(t *testing.T) {
-// 	m, err := NewManifest(cbnt.Version20)
-// 	if err != nil {
-// 		t.Fatalf("%v", err)
-// 	}
-// 	unittest.ManifestReadWrite(t, m, "testdata/bpm-cbnt.bin")
-// }
+func TestReadWriteCBNT(t *testing.T) {
+	m, err := NewManifest(cbnt.Version20)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	unittest.ManifestReadWrite(t, m, "testdata/bpm20.bin")
+}

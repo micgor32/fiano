@@ -247,7 +247,7 @@ func (s *PMBG) Layout() []cbnt.LayoutField {
 			Type:  cbnt.ManifestFieldArrayStatic,
 		},
 		{
-			ID:   1,
+			ID:   2,
 			Name: "Data",
 			Size: func() uint64 {
 				// TODO: verify

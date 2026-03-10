@@ -238,14 +238,12 @@ func (s *ManifestBG) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 		if err != nil {
 			return totalN, fmt.Errorf("unable to read structure info at %d: %w", totalN, err)
 		}
-		totalN += int64(binary.Size(structInfo))
-
 		structID := structInfo.ID.String()
 		fieldIndex := s.fieldIndexByStructID(structID)
 		if fieldIndex < 0 {
-			// TODO: report error "unknown structure ID: '"+structID+"'"
-			continue
+			return totalN, nil
 		}
+		totalN += int64(binary.Size(structInfo))
 		if cbnt.StrictOrderCheck && fieldIndex < previousFieldIndex {
 			return totalN, fmt.Errorf("invalid order of fields (%d < %d): structure '%s' is out of order", fieldIndex, previousFieldIndex, structID)
 		}
@@ -299,12 +297,6 @@ func (s *ManifestBG) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 }
 
 func (s *ManifestBG) RehashRecursive() {
-	for idx := range s.SE {
-		s.SE[idx].RehashRecursive()
-	}
-	if s.PME != nil {
-		// no-op for BG PM
-	}
 	s.PMSE.Rehash()
 	s.Rehash()
 }
@@ -638,14 +630,12 @@ func (s *ManifestCBnT) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 		if err != nil {
 			return totalN, fmt.Errorf("unable to read structure info at %d: %w", totalN, err)
 		}
-		totalN += int64(binary.Size(structInfo))
-
 		structID := structInfo.ID.String()
 		fieldIndex := s.fieldIndexByStructID(structID)
 		if fieldIndex < 0 {
-			// TODO: report error "unknown structure ID: '"+structID+"'"
-			continue
+			return totalN, nil
 		}
+		totalN += int64(binary.Size(structInfo))
 		if cbnt.StrictOrderCheck && fieldIndex < previousFieldIndex {
 			return totalN, fmt.Errorf("invalid order of fields (%d < %d): structure '%s' is out of order", fieldIndex, previousFieldIndex, structID)
 		}
