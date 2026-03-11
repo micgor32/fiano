@@ -24,6 +24,9 @@ type (
 		// optional list reader onluy to be used for types that contain
 		// ManifestFieldList
 		ReadList func(r io.Reader) (int64, error)
+		// optional list writer to be used for types that contain
+		// ManifestFieldList
+		WriteList func(w io.Writer) (int64, error)
 	}
 
 	// Structure is an abstraction of a structure of a manifest.

@@ -21,7 +21,7 @@ type LayoutProvider interface {
 	Layout() []LayoutField
 }
 
-// Stateless engine, we use as "accessor" to offset and size
+// Stateless "engine", we use as "accessor" to offset and size
 // values per structure instead of dedicated methods.
 // TODO: mention in docs how to work with it since all the
 // <type>TotalSize etc. is gone now. It wasn't used that much
@@ -141,51 +141,59 @@ func (Common) ReadFrom(r io.Reader, p LayoutProvider) (int64, error) {
 
 func (Common) WriteTo(w io.Writer, p LayoutProvider) (int64, error) {
 	totalN := int64(0)
-	// TODO: add rehash, this could be implemented per type since
-	// not all types define it (well they do but for some its just ret nil :D).
-	// for _, f := range p.Layout() {
-	// 	switch f.Type {
-	// 	case ManifestFieldEndValue:
-	// 		totalN, err := writeStatic(w, f.Size(), f.Value())
-	// 		if err != nil {
-	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
-	// 		}
-	// 	case ManifestFieldArrayDynamicWithSize:
-	// 		size := uint16(f.Size())
-	// 		totalN, err := writeArrayDynamic(r, &size, f.Value())
-	// 		if err != nil {
-	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
-	// 		}
-	// 	case ManifestFieldArrayDynamicWithPrefix:
-	// 		totalN, err := writeArrayDynamic(r, nil, f.Value())
-	// 		if err != nil {
-	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
-	// 		}
-	// 	case ManifestFieldList:
-	// 		if f.ReadList == nil {
-	// 			return totalN, fmt.Errorf("field '%s' has no list reader", f.Name)
-	// 		}
-	// 		totalN, err := f.ReadList(r)
-	// 		if err != nil {
-	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
-	// 		}
-	// 	case ManifestFieldArrayStatic:
-	// 		totalN, err := writeStatic(r, f.Size(), f.Value())
-	// 		if err != nil {
-	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
-	// 		}
-	// 	case ManifestFieldSubStruct:
-	// 		fieldValue := f.Value()
-	// 		sub, ok := fieldValue.(io.ReaderFrom)
-	// 		if !ok {
-	// 			return totalN, fmt.Errorf("field '%s' does not implement io.ReaderFrom", f.Name)
-	// 		}
-	// 		totalN, err := writeSubStruct(r, sub)
-	// 		if err != nil {
-	// 			return totalN, fmt.Errorf("unable to read field '%s': %w", f.Name, err)
-	// 		}
-	// 	}
-	// }
+
+	for _, f := range p.Layout() {
+		switch f.Type {
+		case ManifestFieldEndValue:
+			n, err := writeStatic(w, f.Size(), f.Value())
+			if err != nil {
+				return totalN, fmt.Errorf("unable to write field '%s': %w", f.Name, err)
+			}
+			totalN += n
+		case ManifestFieldArrayDynamicWithSize:
+			n, err := writeArrayDynamic(w, false, f.Value())
+			if err != nil {
+				return totalN, fmt.Errorf("unable to write field '%s': %w", f.Name, err)
+			}
+			totalN += n
+		case ManifestFieldArrayDynamicWithPrefix:
+			n, err := writeArrayDynamic(w, true, f.Value())
+			if err != nil {
+				return totalN, fmt.Errorf("unable to write field '%s': %w", f.Name, err)
+			}
+			totalN += n
+		case ManifestFieldList:
+			if f.WriteList == nil {
+				return totalN, fmt.Errorf("field '%s' has no list writer", f.Name)
+			}
+			n, err := f.WriteList(w)
+			if err != nil {
+				return totalN, fmt.Errorf("unable to write field '%s': %w", f.Name, err)
+			}
+			totalN += n
+		case ManifestFieldArrayStatic:
+			n, err := writeStatic(w, f.Size(), f.Value())
+			if err != nil {
+				return totalN, fmt.Errorf("unable to write field '%s': %w", f.Name, err)
+			}
+			totalN += n
+		case ManifestFieldSubStruct:
+			fieldValue := f.Value()
+			if fieldValue == nil {
+				continue
+			}
+
+			sub, ok := fieldValue.(io.WriterTo)
+			if !ok {
+				return totalN, fmt.Errorf("field '%s' does not implement io.WriterTo", f.Name)
+			}
+			n, err := writeSubStruct(w, sub)
+			if err != nil {
+				return totalN, fmt.Errorf("unable to write field '%s': %w", f.Name, err)
+			}
+			totalN += n
+		}
+	}
 
 	return totalN, nil
 
@@ -231,6 +239,47 @@ func readArrayDynamic(r io.Reader, size *uint16, out any) (int64, error) {
 
 func readSubStruct(r io.Reader, out io.ReaderFrom) (int64, error) {
 	n, err := out.ReadFrom(r)
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+func writeStatic(w io.Writer, fieldSize uint64, fieldValue any) (int64, error) {
+	n, err := fieldSize, binary.Write(w, endianess, fieldValue)
+	if err != nil {
+		return 0, err
+	}
+	return int64(n), nil
+}
+
+func writeArrayDynamic(w io.Writer, withPrefix bool, out any) (int64, error) {
+	total := int64(0)
+
+	src, ok := out.(*[]byte)
+	if !ok {
+		return total, fmt.Errorf("arrayDynamic expects *[]byte, got %T", out)
+	}
+
+	if withPrefix {
+		size := uint16(len(*src))
+		if err := binary.Write(w, endianess, size); err != nil {
+			return total, err
+		}
+		total += int64(binary.Size(size))
+	}
+
+	n := len(*src)
+	if err := binary.Write(w, endianess, *src); err != nil {
+		return total, err
+	}
+	total += int64(n)
+
+	return total, nil
+}
+
+func writeSubStruct(w io.Writer, out io.WriterTo) (int64, error) {
+	n, err := out.WriteTo(w)
 	if err != nil {
 		return 0, err
 	}
