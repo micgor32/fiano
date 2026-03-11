@@ -170,6 +170,17 @@ func (s *ManifestBG) Layout() []cbnt.LayoutField {
 			},
 			Value: func() any { return &s.SE },
 			Type:  cbnt.ManifestFieldList,
+			WriteList: func(w io.Writer) (int64, error) {
+				totalN := int64(0)
+				for idx := range s.SE {
+					n, err := s.SE[idx].WriteTo(w)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to write field 'SE[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+				return totalN, nil
+			},
 		},
 		{
 			ID:   2,
@@ -180,8 +191,13 @@ func (s *ManifestBG) Layout() []cbnt.LayoutField {
 				}
 				return s.PME.TotalSize()
 			},
-			Value: func() any { return s.PME },
-			Type:  cbnt.ManifestFieldSubStruct,
+			Value: func() any {
+				if s.PME == nil {
+					return nil
+				}
+				return s.PME
+			},
+			Type: cbnt.ManifestFieldSubStruct,
 		},
 		{
 			ID:    3,
@@ -306,42 +322,8 @@ func (s *ManifestBG) Rehash() {
 }
 
 func (s *ManifestBG) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	{
-		n, err := s.BPMHBG.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'BPMH': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	for idx := range s.SE {
-		n, err := s.SE[idx].WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'SE[%d]': %w", idx, err)
-		}
-		totalN += int64(n)
-	}
-
-	if s.PME != nil {
-		n, err := s.PME.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PME': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	{
-		n, err := s.PMSE.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PMSE': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *ManifestBG) TotalSize() uint64 {
@@ -504,6 +486,9 @@ func (s *ManifestCBnT) Validate() error {
 }
 
 func (s *ManifestCBnT) Layout() []cbnt.LayoutField {
+	// All fields marked with omitempty have to be checked for being
+	// empty in the clousure for Value. Otherwise we risk some nasty errors
+	// even with valid (i.e. compliant with the spec) Manifests.
 	return []cbnt.LayoutField{
 		{
 			ID:    0,
@@ -524,6 +509,17 @@ func (s *ManifestCBnT) Layout() []cbnt.LayoutField {
 			},
 			Value: func() any { return &s.SE },
 			Type:  cbnt.ManifestFieldList,
+			WriteList: func(w io.Writer) (int64, error) {
+				totalN := int64(0)
+				for idx := range s.SE {
+					n, err := s.SE[idx].WriteTo(w)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to write field 'SE[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+				return totalN, nil
+			},
 		},
 		{
 			ID:   2,
@@ -534,8 +530,13 @@ func (s *ManifestCBnT) Layout() []cbnt.LayoutField {
 				}
 				return s.TXTE.TotalSize()
 			},
-			Value: func() any { return s.TXTE },
-			Type:  cbnt.ManifestFieldSubStruct,
+			Value: func() any {
+				if s.TXTE == nil {
+					return nil
+				}
+				return s.TXTE
+			},
+			Type: cbnt.ManifestFieldSubStruct,
 		},
 		{
 			ID:   3,
@@ -546,8 +547,13 @@ func (s *ManifestCBnT) Layout() []cbnt.LayoutField {
 				}
 				return s.Res.TotalSize()
 			},
-			Value: func() any { return s.Res },
-			Type:  cbnt.ManifestFieldSubStruct,
+			Value: func() any {
+				if s.Res == nil {
+					return nil
+				}
+				return s.Res
+			},
+			Type: cbnt.ManifestFieldSubStruct,
 		},
 		{
 			ID:   4,
@@ -558,8 +564,13 @@ func (s *ManifestCBnT) Layout() []cbnt.LayoutField {
 				}
 				return s.PCDE.TotalSize()
 			},
-			Value: func() any { return s.PCDE },
-			Type:  cbnt.ManifestFieldSubStruct,
+			Value: func() any {
+				if s.PCDE == nil {
+					return nil
+				}
+				return s.PCDE
+			},
+			Type: cbnt.ManifestFieldSubStruct,
 		},
 		{
 			ID:   5,
@@ -570,8 +581,13 @@ func (s *ManifestCBnT) Layout() []cbnt.LayoutField {
 				}
 				return s.PME.TotalSize()
 			},
-			Value: func() any { return s.PME },
-			Type:  cbnt.ManifestFieldSubStruct,
+			Value: func() any {
+				if s.PME == nil {
+					return nil
+				}
+				return s.PME
+			},
+			Type: cbnt.ManifestFieldSubStruct,
 		},
 		{
 			ID:    6,
@@ -743,66 +759,8 @@ func (s *ManifestCBnT) Rehash() {
 }
 
 func (s *ManifestCBnT) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	{
-		n, err := s.BPMHCBnT.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'BPMH': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	for idx := range s.SE {
-		n, err := s.SE[idx].WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'SE[%d]': %w", idx, err)
-		}
-		totalN += int64(n)
-	}
-
-	if s.TXTE != nil {
-		n, err := s.TXTE.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'TXTE': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	if s.Res != nil {
-		n, err := s.Res.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Res': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	if s.PCDE != nil {
-		n, err := s.PCDE.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PCDE': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	if s.PME != nil {
-		n, err := s.PME.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PME': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	{
-		n, err := s.PMSE.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PMSE': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *ManifestCBnT) TotalSize() uint64 {

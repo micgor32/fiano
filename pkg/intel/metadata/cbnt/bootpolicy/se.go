@@ -103,45 +103,7 @@ func (s *IBBSegment) ReadFrom(r io.Reader) (int64, error) {
 // WriteTo writes the IBBSegment into 'w' in format defined in
 // the document #575623.
 func (s *IBBSegment) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
-
-	// Reserved (ManifestFieldType: arrayStatic)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, s.Reserved[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Flags (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.Flags)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Flags': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Base (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.Base)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Base': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Size (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.Size)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Size': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 // Size returns the total size of the IBBSegment.
@@ -437,6 +399,21 @@ func (s *SECBnT) Layout() []cbnt.LayoutField {
 				}
 				return totalN, nil
 			},
+			WriteList: func(w io.Writer) (int64, error) {
+				count := uint8(len(s.IBBSegments))
+				if err := binary.Write(w, binary.LittleEndian, &count); err != nil {
+					return 0, fmt.Errorf("unable to write the count for field 'IBBSegments': %w", err)
+				}
+				totalN := int64(binary.Size(count))
+				for idx := range s.IBBSegments {
+					n, err := s.IBBSegments[idx].WriteTo(w)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to write field 'IBBSegments[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+				return totalN, nil
+			},
 		},
 	}
 }
@@ -509,180 +486,8 @@ func (s *SECBnT) Rehash() {
 // WriteTo writes the SE into 'w' in format defined in
 // the document #575623.
 func (s *SECBnT) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoCBNT.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// SetNumber (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.SetNumber)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'SetNumber': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved1 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, s.Reserved1[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved1': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PBETValue (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.PBETValue)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PBETValue': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Flags (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.Flags)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Flags': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// IBBMCHBAR (ManifestFieldType: endValue)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, &s.IBBMCHBAR)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'IBBMCHBAR': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// VTdBAR (ManifestFieldType: endValue)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, &s.VTdBAR)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'VTdBAR': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// DMAProtBase0 (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.DMAProtBase0)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'DMAProtBase0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// DMAProtLimit0 (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.DMAProtLimit0)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'DMAProtLimit0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// DMAProtBase1 (ManifestFieldType: endValue)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, &s.DMAProtBase1)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'DMAProtBase1': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// DMAProtLimit1 (ManifestFieldType: endValue)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, &s.DMAProtLimit1)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'DMAProtLimit1': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PostIBBHash (ManifestFieldType: subStruct)
-	{
-		n, err := s.PostIBBHash.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PostIBBHash': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// IBBEntryPoint (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.IBBEntryPoint)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'IBBEntryPoint': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// DigestList (ManifestFieldType: subStruct)
-	{
-		n, err := s.DigestList.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'DigestList': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// OBBHash (ManifestFieldType: subStruct)
-	{
-		n, err := s.OBBHash.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'OBBHash': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved2 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 3, binary.Write(w, binary.LittleEndian, s.Reserved2[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved2': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// IBBSegments (ManifestFieldType: list)
-	{
-		count := uint8(len(s.IBBSegments))
-		err := binary.Write(w, binary.LittleEndian, &count)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write the count for field 'IBBSegments': %w", err)
-		}
-		totalN += int64(binary.Size(count))
-		for idx := range s.IBBSegments {
-			n, err := s.IBBSegments[idx].WriteTo(w)
-			if err != nil {
-				return totalN, fmt.Errorf("unable to write field 'IBBSegments[%d]': %w", idx, err)
-			}
-			totalN += int64(n)
-		}
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 // Size returns the total size of the SE.
@@ -867,6 +672,21 @@ func (s *SEBG) Layout() []cbnt.LayoutField {
 				}
 				return totalN, nil
 			},
+			WriteList: func(w io.Writer) (int64, error) {
+				count := uint8(len(s.IBBSegments))
+				if err := binary.Write(w, binary.LittleEndian, &count); err != nil {
+					return 0, fmt.Errorf("unable to write the count for field 'IBBSegments': %w", err)
+				}
+				totalN := int64(binary.Size(count))
+				for idx := range s.IBBSegments {
+					n, err := s.IBBSegments[idx].WriteTo(w)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to write field 'IBBSegments[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+				return totalN, nil
+			},
 		},
 	}
 }
@@ -906,152 +726,7 @@ func (s *SEBG) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 // WriteTo writes the SE into 'w' in format defined in
 // the document #575623.
 func (s *SEBG) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoBG.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved1 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, s.Reserved1[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved1': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PBETValue (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.PBETValue)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PBETValue': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Flags (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.Flags)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Flags': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// IBBMCHBAR (ManifestFieldType: endValue)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, &s.IBBMCHBAR)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'IBBMCHBAR': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// VTdBAR (ManifestFieldType: endValue)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, &s.VTdBAR)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'VTdBAR': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PMRLBase (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.PMRLBase)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PMRLBase': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PMRLLimit (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.PMRLLimit)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PMRLLimit': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved2 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, s.Reserved2[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved2': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved3 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, s.Reserved3[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved3': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PostIBBHash (ManifestFieldType: subStruct)
-	{
-		n, err := s.PostIBBHash.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PostIBBHash': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// IBBEntryPoint (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.IBBEntryPoint)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'IBBEntryPoint': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Digest (ManifestFieldType: subStruct)
-	{
-		n, err := s.Digest.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Digest': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// IBBSegments (ManifestFieldType: list)
-	{
-		count := uint8(len(s.IBBSegments))
-		err := binary.Write(w, binary.LittleEndian, &count)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write the count for field 'IBBSegments': %w", err)
-		}
-		totalN += int64(binary.Size(count))
-		for idx := range s.IBBSegments {
-			n, err := s.IBBSegments[idx].WriteTo(w)
-			if err != nil {
-				return totalN, fmt.Errorf("unable to write field 'IBBSegments[%d]': %w", idx, err)
-			}
-			totalN += int64(n)
-		}
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *SEBG) SizeOf(id int) (uint64, error) {

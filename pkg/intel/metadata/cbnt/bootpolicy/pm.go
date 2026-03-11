@@ -163,51 +163,8 @@ func (s *PMCBnT) Rehash() {
 // WriteTo writes the PM into 'w' in format defined in
 // the document #575623.
 func (s *PMCBnT) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoCBNT.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
-	// DUMMY, replace once WriteTo is generic as well
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, s.DataSize[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'DataSize': %w", err)
-		}
-		totalN += int64(n)
-	}
-	// Data (ManifestFieldType: arrayDynamic)
-	{
-		size := uint16(len(s.Data))
-		err := binary.Write(w, binary.LittleEndian, size)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write the size of field 'Data': %w", err)
-		}
-		totalN += int64(binary.Size(size))
-		n, err := len(s.Data), binary.Write(w, binary.LittleEndian, s.Data)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Data': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 // Size returns the total size of the PM.
@@ -302,42 +259,7 @@ func (s *PMBG) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 // WriteTo writes the PM into 'w' in format defined in
 // the document #575623.
 func (s *PMBG) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoBG.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// DataSize (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.DataSize)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'DataSize': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Data (ManifestFieldType: arrayDynamic)
-	{
-		size := uint16(len(s.Data))
-		err := binary.Write(w, binary.LittleEndian, size)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write the size of field 'Data': %w", err)
-		}
-		totalN += int64(binary.Size(size))
-		n, err := len(s.Data), binary.Write(w, binary.LittleEndian, s.Data)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Data': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *PMBG) SizeOf(id int) (uint64, error) {

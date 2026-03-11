@@ -150,43 +150,8 @@ func (s *PCD) Rehash() {
 // WriteTo writes the PCD into 'w' in format defined in
 // the document #575623.
 func (s *PCD) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoCBNT.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Data (ManifestFieldType: arrayDynamic)
-	{
-		size := uint16(len(s.Data))
-		err := binary.Write(w, binary.LittleEndian, s.SizeOfData)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write the size of field 'Data': %w", err)
-		}
-		totalN += int64(binary.Size(size))
-		n, err := len(s.Data), binary.Write(w, binary.LittleEndian, s.Data)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Data': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 // Size returns the total size of the PCD.

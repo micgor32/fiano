@@ -60,7 +60,7 @@ func (s *Signature) Layout() []cbnt.LayoutField {
 			ID:    0,
 			Name:  "Struct Info",
 			Size:  func() uint64 { return s.StructInfo.TotalSize() },
-			Value: func() any { return &s.StructInfo },
+			Value: func() any { return s.StructInfo },
 			Type:  cbnt.ManifestFieldSubStruct,
 		},
 		{
@@ -132,28 +132,8 @@ func (s *Signature) RehashRecursive() {
 // WriteTo writes the Signature into 'w' in format defined in
 // the document #575623.
 func (s *Signature) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfo.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KeySignature (ManifestFieldType: subStruct)
-	{
-		n, err := s.KeySignature.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KeySignature': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 // Size returns the total size of the Signature.

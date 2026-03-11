@@ -203,73 +203,8 @@ func (s *BPMHCBnT) Rehash() {
 // WriteTo writes the BPMH into 'w' in format defined in
 // the document #575623.
 func (s *BPMHCBnT) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoCBNT.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KeySignatureOffset (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.KeySignatureOffset)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KeySignatureOffset': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// BPMRevision (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.BPMRevision)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'BPMRevision': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// BPMSVN (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.BPMSVN)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'BPMSVN': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ACMSVNAuth (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.ACMSVNAuth)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'ACMSVNAuth': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// NEMDataStack (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.NEMDataStack)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'NEMDataStack': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 // Size returns the total size of the BPMH.
@@ -423,72 +358,7 @@ func (s *BPMHBG) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 // WriteTo writes the BPMH into 'w' in format defined in
 // the document #575623.
 func (s *BPMHBG) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoBG.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// HdrStructVersion (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.HdrStructVersion)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'HdrStructVersion': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PMBPMVersion (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.PMBPMVersion)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PMBPMVersion': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// BPMSVN (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.BPMSVN)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'BPMSVN': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ACMSVNAuth (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.ACMSVNAuth)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'ACMSVNAuth': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved0 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, s.Reserved0[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// NEMDataStack (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.NEMDataStack)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'NEMDataStack': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 // Size returns the total size of the BPMH.

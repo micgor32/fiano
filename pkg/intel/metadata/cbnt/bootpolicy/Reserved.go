@@ -5,7 +5,6 @@
 package cbntbootpolicy
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -125,28 +124,8 @@ func (s *Reserved) Rehash() {
 // WriteTo writes the Reserved into 'w' in format defined in
 // the document #575623.
 func (s *Reserved) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoCBNT.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ReservedData (ManifestFieldType: arrayStatic)
-	{
-		n, err := 32, binary.Write(w, binary.LittleEndian, s.ReservedData[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'ReservedData': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 // Size returns the total size of the Reserved.
