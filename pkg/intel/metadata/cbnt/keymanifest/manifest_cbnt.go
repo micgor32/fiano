@@ -174,99 +174,8 @@ func (s *CBnTManifest) Rehash() {
 // WriteTo writes the Manifest into 'w' in format defined in
 // the document #575623.
 func (s *CBnTManifest) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoCBNT.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KeyManifestSignatureOffset (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.KeyManifestSignatureOffset)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KeyManifestSignatureOffset': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Reserved2 (ManifestFieldType: arrayStatic)
-	{
-		n, err := 3, binary.Write(w, binary.LittleEndian, s.Reserved2[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Reserved2': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Revision (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.Revision)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Revision': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KMSVN (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.KMSVN)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KMSVN': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KMID (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.KMID)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KMID': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// PubKeyHashAlg (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.PubKeyHashAlg)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'PubKeyHashAlg': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Hash (ManifestFieldType: list)
-	{
-		count := uint16(len(s.Hash))
-		err := binary.Write(w, binary.LittleEndian, &count)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write the count for field 'Hash': %w", err)
-		}
-		totalN += int64(binary.Size(count))
-		for idx := range s.Hash {
-			n, err := s.Hash[idx].WriteTo(w)
-			if err != nil {
-				return totalN, fmt.Errorf("unable to write field 'Hash[%d]': %w", idx, err)
-			}
-			totalN += int64(n)
-		}
-	}
-
-	// KeyAndSignature (ManifestFieldType: subStruct)
-	{
-		n, err := s.KeyAndSignature.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KeyAndSignature': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *CBnTManifest) Layout() []cbnt.LayoutField {
@@ -347,6 +256,23 @@ func (s *CBnTManifest) Layout() []cbnt.LayoutField {
 					}
 					totalN += int64(n)
 				}
+				return totalN, nil
+			},
+			WriteList: func(w io.Writer) (int64, error) {
+				count := uint16(len(s.Hash))
+				if err := binary.Write(w, binary.LittleEndian, &count); err != nil {
+					return 0, fmt.Errorf("unable to write the count for field 'Hash': %w", err)
+				}
+				totalN := int64(binary.Size(count))
+
+				for idx := range s.Hash {
+					n, err := s.Hash[idx].WriteTo(w)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to write field 'Hash[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+
 				return totalN, nil
 			},
 		},

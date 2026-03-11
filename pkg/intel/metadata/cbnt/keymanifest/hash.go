@@ -146,28 +146,7 @@ func (s *Hash) RehashRecursive() {
 // WriteTo writes the Hash into 'w' in format defined in
 // the document #575623.
 func (s *Hash) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
-	// s.Rehash()
-
-	// Usage (ManifestFieldType: endValue)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, &s.Usage)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Usage': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Digest (ManifestFieldType: subStruct)
-	{
-		n, err := s.Digest.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Digest': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *Hash) Layout() []cbnt.LayoutField {

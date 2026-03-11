@@ -7,7 +7,6 @@ package cbntkey
 import (
 	"bytes"
 	"crypto"
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -116,63 +115,7 @@ func (s *BGManifest) RehashRecursive() {
 // WriteTo writes the Manifest into 'w' in format defined in
 // the document #575623.
 func (s *BGManifest) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
-
-	// StructInfo (ManifestFieldType: structInfo)
-	{
-		n, err := s.StructInfoBG.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'StructInfo': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KMVersion (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.KMVersion)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KMVersion': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KMSVN (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.KMSVN)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KMSVN': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KMID (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.KMID)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KMID': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// BPKey (ManifestFieldType: subStruct)
-	{
-		n, err := s.BPKey.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'BPKey': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KeyAndSignature (ManifestFieldType: subStruct)
-	{
-		n, err := s.KeyAndSignature.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KeyAndSignature': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *BGManifest) Layout() []cbnt.LayoutField {
