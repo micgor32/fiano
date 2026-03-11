@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"encoding/binary"
 	"io"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
@@ -70,55 +69,8 @@ func (s *Signature) Rehash() {
 // WriteTo writes the Signature into 'w' in format defined in
 // the document #575623.
 func (s *Signature) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// SigScheme (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.SigScheme)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'SigScheme': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KeySize (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.KeySize)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KeySize': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// HashAlg (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.HashAlg)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'HashAlg': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Data (ManifestFieldType: arrayDynamic)
-	{
-		n, err := len(s.Data), binary.Write(w, binary.LittleEndian, s.Data)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Data': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *Signature) Layout() []LayoutField {

@@ -5,7 +5,6 @@
 package cbnt
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -36,27 +35,7 @@ func (s StructInfoBG) Validate() error {
 // WriteTo writes the StructInfo into 'w' in format defined in
 // the document #575623.
 func (s StructInfoBG) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
-
-	// ID (ManifestFieldType: arrayStatic)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, s.ID[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'ID': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s StructInfoBG) Layout() []LayoutField {

@@ -286,46 +286,8 @@ func (s *Key) Rehash() {
 // WriteTo writes the Key into 'w' in format defined in
 // the document #575623.
 func (s *Key) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// KeyAlg (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.KeyAlg)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KeyAlg': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// KeySize (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.KeySize)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'KeySize': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Data (ManifestFieldType: arrayDynamic)
-	{
-		n, err := len(s.Data), binary.Write(w, binary.LittleEndian, s.Data)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Data': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *Key) SizeOf(id int) (uint64, error) {

@@ -5,7 +5,6 @@
 package cbnt
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -42,45 +41,7 @@ func (s StructInfoCBNT) Validate() error {
 // WriteTo writes the StructInfo into 'w' in format defined in
 // the document #575623.
 func (s StructInfoCBNT) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
-
-	// ID (ManifestFieldType: arrayStatic)
-	{
-		n, err := 8, binary.Write(w, binary.LittleEndian, s.ID[:])
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'ID': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Variable0 (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.Variable0)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Variable0': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// ElementSize (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.ElementSize)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'ElementSize': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s StructInfoCBNT) Layout() []LayoutField {

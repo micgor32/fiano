@@ -51,36 +51,8 @@ func (s *TPMInfoList) Rehash() {
 // WriteTo writes the TPMInfoList into 'w' in format defined in
 // the document #575623.
 func (s *TPMInfoList) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// Capabilities (ManifestFieldType: endValue)
-	{
-		n, err := 4, binary.Write(w, binary.LittleEndian, &s.Capabilities)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Capabilities': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Algorithms (ManifestFieldType: list)
-	{
-		count := uint16(len(s.Algorithms))
-		err := binary.Write(w, binary.LittleEndian, &count)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write the count for field 'Algorithms': %w", err)
-		}
-		totalN += int64(binary.Size(count))
-		for idx := range s.Algorithms {
-			n, err := s.Algorithms[idx].WriteTo(w)
-			if err != nil {
-				return totalN, fmt.Errorf("unable to write field 'Algorithms[%d]': %w", idx, err)
-			}
-			totalN += int64(n)
-		}
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *TPMInfoList) Layout() []LayoutField {
@@ -120,6 +92,23 @@ func (s *TPMInfoList) Layout() []LayoutField {
 					}
 					totalN += int64(n)
 				}
+				return totalN, nil
+			},
+			WriteList: func(w io.Writer) (int64, error) {
+				count := uint16(len(s.Algorithms))
+				if err := binary.Write(w, binary.LittleEndian, &count); err != nil {
+					return 0, fmt.Errorf("unable to write the count for field 'Algorithms': %w", err)
+				}
+				totalN := int64(binary.Size(count))
+
+				for idx := range s.Algorithms {
+					n, err := s.Algorithms[idx].WriteTo(w)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to write field 'Algorithms[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+
 				return totalN, nil
 			},
 		},

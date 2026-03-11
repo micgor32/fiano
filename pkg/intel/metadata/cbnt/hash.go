@@ -66,36 +66,8 @@ func (s *HashList) Rehash() {
 // WriteTo writes the HashList into 'w' in format defined in
 // the document #575623.
 func (s *HashList) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// Size (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.Size)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Size': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// List (ManifestFieldType: list)
-	{
-		count := uint16(len(s.List))
-		err := binary.Write(w, binary.LittleEndian, &count)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write the count for field 'List': %w", err)
-		}
-		totalN += int64(binary.Size(count))
-		for idx := range s.List {
-			n, err := s.List[idx].WriteTo(w)
-			if err != nil {
-				return totalN, fmt.Errorf("unable to write field 'List[%d]': %w", idx, err)
-			}
-			totalN += int64(n)
-		}
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *HashList) Layout() []LayoutField {
@@ -137,6 +109,23 @@ func (s *HashList) Layout() []LayoutField {
 					}
 					totalN += int64(n)
 				}
+				return totalN, nil
+			},
+			WriteList: func(w io.Writer) (int64, error) {
+				count := uint16(len(s.List))
+				if err := binary.Write(w, binary.LittleEndian, &count); err != nil {
+					return 0, fmt.Errorf("unable to write the count for field 'List': %w", err)
+				}
+				totalN := int64(binary.Size(count))
+
+				for idx := range s.List {
+					n, err := s.List[idx].WriteTo(w)
+					if err != nil {
+						return totalN, fmt.Errorf("unable to write field 'List[%d]': %w", idx, err)
+					}
+					totalN += int64(n)
+				}
+
 				return totalN, nil
 			},
 		},
@@ -219,34 +208,8 @@ func (s *HashStructure) Rehash() {
 // WriteTo writes the HashStructure into 'w' in format defined in
 // the document #575623.
 func (s *HashStructure) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// HashAlg (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.HashAlg)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'HashAlg': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// HashBuffer (ManifestFieldType: arrayDynamic)
-	{
-		size := uint16(len(s.HashBuffer))
-		err := binary.Write(w, binary.LittleEndian, size)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write the size of field 'HashBuffer': %w", err)
-		}
-		totalN += int64(binary.Size(size))
-		n, err := len(s.HashBuffer), binary.Write(w, binary.LittleEndian, s.HashBuffer)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'HashBuffer': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *HashStructure) Layout() []LayoutField {
@@ -348,27 +311,7 @@ func (s *HashStructureFill) ReadFrom(r io.Reader) (int64, error) {
 // WriteTo writes the HashStructureFill into 'w' in format defined in
 // the document #575623.
 func (s *HashStructureFill) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
-
-	// HashAlg (ManifestFieldType: endValue)
-	{
-		n, err := 2, binary.Write(w, binary.LittleEndian, &s.HashAlg)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'HashAlg': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// HashBuffer (ManifestFieldType: arrayDynamic)
-	{
-		n, err := len(s.HashBuffer), binary.Write(w, binary.LittleEndian, s.HashBuffer)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'HashBuffer': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *HashStructureFill) Layout() []LayoutField {

@@ -6,7 +6,6 @@ package cbnt
 
 import (
 	"crypto"
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -117,36 +116,7 @@ func (s *KeySignature) Validate() error {
 
 // ReadFrom reads the KeySignature from 'r' in format defined in the document #575623.
 func (s *KeySignature) ReadFrom(r io.Reader) (int64, error) {
-	totalN := int64(0)
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Read(r, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Key (ManifestFieldType: subStruct)
-	{
-		n, err := s.Key.ReadFrom(r)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Key': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Signature (ManifestFieldType: subStruct)
-	{
-		n, err := s.Signature.ReadFrom(r)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to read field 'Signature': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.ReadFrom(r, s)
 }
 
 // RehashRecursive calls Rehash (see below) recursively.
@@ -164,37 +134,8 @@ func (s *KeySignature) Rehash() {
 // WriteTo writes the KeySignature into 'w' in format defined in
 // the document #575623.
 func (s *KeySignature) WriteTo(w io.Writer) (int64, error) {
-	totalN := int64(0)
 	s.Rehash()
-
-	// Version (ManifestFieldType: endValue)
-	{
-		n, err := 1, binary.Write(w, binary.LittleEndian, &s.Version)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Version': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Key (ManifestFieldType: subStruct)
-	{
-		n, err := s.Key.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Key': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	// Signature (ManifestFieldType: subStruct)
-	{
-		n, err := s.Signature.WriteTo(w)
-		if err != nil {
-			return totalN, fmt.Errorf("unable to write field 'Signature': %w", err)
-		}
-		totalN += int64(n)
-	}
-
-	return totalN, nil
+	return s.Common.WriteTo(w, s)
 }
 
 func (s *KeySignature) Layout() []LayoutField {
@@ -204,18 +145,21 @@ func (s *KeySignature) Layout() []LayoutField {
 			Name:  "Version",
 			Size:  func() uint64 { return 1 },
 			Value: func() any { return &s.Version },
+			Type:  ManifestFieldEndValue,
 		},
 		{
 			ID:    1,
 			Name:  "Key",
 			Size:  func() uint64 { return s.Key.Common.TotalSize(&s.Key) },
 			Value: func() any { return &s.Key },
+			Type:  ManifestFieldSubStruct,
 		},
 		{
 			ID:    2,
 			Name:  "Signature",
 			Size:  func() uint64 { return s.Signature.Common.TotalSize(&s.Signature) },
 			Value: func() any { return &s.Signature },
+			Type:  ManifestFieldSubStruct,
 		},
 	}
 }
