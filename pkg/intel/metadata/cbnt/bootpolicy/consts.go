@@ -13,6 +13,14 @@ const (
 	// the document #575623) of element 'PCD'.
 	StructureIDPCD = "__PCDS__"
 
+	// StructureIDPDRS is the StructureID of the PDRS
+	// record embedded in PCD data.
+	StructureIDPDRS = "__PDRS__"
+
+	// StructureIDCNBS is the StructureID of the CNBS
+	// record embedded in PCD data.
+	StructureIDCNBS = "__CNBS__"
+
 	// StructureIDPM is the StructureID (in terms of
 	// the document #575623) of element 'PM'.
 	StructureIDPM = "__PMDA__"
