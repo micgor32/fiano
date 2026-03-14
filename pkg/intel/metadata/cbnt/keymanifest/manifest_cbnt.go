@@ -315,11 +315,22 @@ func (s *CBnTManifest) TotalSize() uint64 {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *CBnTManifest) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	base := s.Common.PrettyString(depth, withHeader, s, "CBnT Key Manifest", opts...)
 	var lines []string
-	lines = append(lines, base)
+	if withHeader {
+		lines = append(lines, pretty.Header(depth, "CBnT Key Manifest", s))
+	}
+	if s == nil {
+		return strings.Join(lines, "\n")
+	}
 
-	// FIXME: just a temp solution, it is wrong, but low prio for now
+	lines = append(lines, pretty.SubValue(depth+1, "Struct Info", "", &s.StructInfoCBNT, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Key Manifest Signature Offset", "", &s.KeyManifestSignatureOffset, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Reserved 2", "", &s.Reserved2, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Revision", "", &s.Revision, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "KMSVN", "", &s.KMSVN, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "KMID", "", &s.KMID, opts...)...)
+	lines = append(lines, pretty.SubValue(depth+1, "Pub Key Hash Alg", "", &s.PubKeyHashAlg, opts...)...)
+
 	lines = append(lines, pretty.Header(
 		depth+1,
 		fmt.Sprintf("Hash: Array of \"Key Manifest\" of length %d", len(s.Hash)),
@@ -331,6 +342,16 @@ func (s *CBnTManifest) PrettyString(depth uint, withHeader bool, opts ...pretty.
 			fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+
 				strings.TrimSpace(s.Hash[i].PrettyString(depth+2, true, opts...)),
 		)
+	}
+
+	if depth < 1 {
+		lines = append(lines, "")
+	}
+
+	lines = append(lines, pretty.SubValue(depth+1, "Key And Signature", "", &s.KeyAndSignature, opts...)...)
+
+	if depth < 2 {
+		lines = append(lines, "")
 	}
 
 	return strings.Join(lines, "\n")

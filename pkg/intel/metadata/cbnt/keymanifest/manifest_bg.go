@@ -30,7 +30,7 @@ func (m *BGManifest) SetSignature(
 	privKey crypto.Signer,
 	signedData []byte,
 ) error {
-	// the second use of algo should be gone here
+	// FIXME: the second use of algo should be gone here
 	err := m.KeyAndSignature.SetSignature(algo, algo, privKey, signedData)
 	if err != nil {
 		return fmt.Errorf("unable to set the signature: %w", err)
