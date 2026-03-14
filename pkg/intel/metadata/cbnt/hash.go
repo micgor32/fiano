@@ -5,10 +5,10 @@
 package cbnt
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/linuxboot/fiano/pkg/intel/metadata/common/pretty"
 )
@@ -162,11 +162,20 @@ func (s *HashList) TotalSize() uint64 {
 
 // PrettyString returns the content of the structure in an easy-to-read format.
 func (s *HashList) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) string {
-	result := Common{}.PrettyString(depth, withHeader, s, "Hash List", opts...)
-	if depth < 1 {
-		return result + "\n"
+	base := Common{}.PrettyString(depth, withHeader, s, "Hash List", opts...)
+	var lines []string
+	lines = append(lines, base)
+
+	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("List: Array of \"Hash List\" of length %d", len(s.List)), s.List))
+	for i := 0; i < len(s.List); i++ {
+		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.List[i].PrettyString(depth+2, true, opts...)))
 	}
-	return result
+
+	if depth < 1 {
+		lines = append(lines, "")
+	}
+
+	return strings.Join(lines, "\n")
 }
 
 type HashStructure struct {
@@ -286,16 +295,18 @@ func NewHashStructureFill(alg Algorithm) *HashStructureFill {
 	return s
 }
 
+// this little hack here mimics the hack from old bg package
 func (s *HashStructureFill) hashBufferSize() uint64 {
-	hashSizeFieldLen := uint64(binary.Size(uint16(0)))
+	const hashSizeFieldLen = 2
 	if s.HashAlg.IsNull() {
-		return uint64(sha256.Size) + hashSizeFieldLen
+		return 32 + hashSizeFieldLen
 	}
+
 	h, err := s.HashAlg.Hash()
 	if err != nil {
 		return hashSizeFieldLen
 	}
-	return uint64(h.Size()) + hashSizeFieldLen
+	return uint64((h.Size() + hashSizeFieldLen))
 }
 
 // ReadFrom reads the HashStructureFill from 'r' in format defined in the document #575623.
