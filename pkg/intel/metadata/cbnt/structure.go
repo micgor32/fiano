@@ -19,8 +19,8 @@ type StructInfoCBNT struct {
 	Common
 	ID          StructureID `json:"StructInfoID"`
 	Version     uint8       `json:"StructInfoVersion"`
-	Variable0   uint8       `json:"StructInfoVariable0,omitempty"`
-	ElementSize uint16      `json:"StructInfoElementSize,omitempty"`
+	Variable0   uint8       `json:"StructInfoVariable0"`
+	ElementSize uint16      `json:"StructInfoElementSize"`
 }
 
 // ReadFrom reads the StructInfo from 'r' in format defined in the document #575623.
