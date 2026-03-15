@@ -186,7 +186,7 @@ func NewSE(bgv cbnt.BootGuardVersion) (SE, error) {
 		// Recursively initializing a child structure:
 		s.PostIBBHash = *cbnt.NewHashStructureFill(cbnt.Algorithm(hashAlg))
 		// Recursively initializing a child structure:
-		s.Digest = *cbnt.NewHashStructureFill(cbnt.Algorithm(hashAlg))
+		s.Digest = *cbnt.NewHashStructure(cbnt.Algorithm(hashAlg))
 		return s, nil
 	case cbnt.Version20, cbnt.Version21:
 		s := &SECBnT{}
@@ -510,6 +510,13 @@ func (s *SECBnT) PrettyString(depth uint, withHeader bool, opts ...pretty.Option
 		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.IBBSegments[i].PrettyString(depth+2, true)))
 	}
 
+	if depth < 1 {
+		lines = append(lines, "")
+	}
+	if depth < 2 {
+		lines = append(lines, "")
+	}
+
 	return strings.Join(lines, "\n")
 }
 
@@ -539,7 +546,7 @@ type SEBG struct {
 
 	IBBEntryPoint uint32 `json:"seIBBEntry"`
 
-	Digest cbnt.HashStructureFill `json:"seDigestList"`
+	Digest cbnt.HashStructure `json:"seDigestList"`
 
 	IBBSegments []IBBSegment `countType:"uint8" json:"seIBBSegments,omitempty"`
 }
@@ -765,6 +772,13 @@ func (s *SEBG) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) 
 	lines = append(lines, pretty.Header(depth+1, fmt.Sprintf("IBBSegments: Array of \"IBB Segments Element\" of length %d", len(s.IBBSegments)), s.IBBSegments))
 	for i := 0; i < len(s.IBBSegments); i++ {
 		lines = append(lines, fmt.Sprintf("%sitem #%d: ", strings.Repeat("  ", int(depth+2)), i)+strings.TrimSpace(s.IBBSegments[i].PrettyString(depth+2, true)))
+	}
+
+	if depth < 1 {
+		lines = append(lines, "")
+	}
+	if depth < 2 {
+		lines = append(lines, "")
 	}
 
 	return strings.Join(lines, "\n")

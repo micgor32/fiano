@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:generate manifestcodegen
-
 package cbntbootpolicy
 
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -70,6 +69,81 @@ type ManifestBG struct {
 	PMSE Signature `json:"bpmSignature"`
 }
 
+func (s ManifestBG) MarshalJSON() ([]byte, error) {
+	type signatureJSON struct {
+		StructInfoID      cbnt.StructureID  `json:"StructInfoID"`
+		StructInfoVersion uint8             `json:"StructInfoVersion"`
+		SigKeySignature   cbnt.KeySignature `json:"sigKeySignature"`
+	}
+
+	type manifestBGJSON struct {
+		BPMHBG BPMHBG        `json:"bpmHeader"`
+		SE     []SEBG        `json:"bpmSE"`
+		PME    *PMBG         `json:"bpmPME,omitempty"`
+		PMSE   signatureJSON `json:"bpmSignature"`
+	}
+
+	sigInfo := cbnt.StructInfoBG{}
+	if info, ok := s.PMSE.StructInfo.(cbnt.StructInfoBG); ok {
+		sigInfo = info
+	}
+
+	out := manifestBGJSON{
+		BPMHBG: s.BPMHBG,
+		SE:     s.SE,
+		PME:    s.PME,
+		PMSE: signatureJSON{
+			StructInfoID:      sigInfo.ID,
+			StructInfoVersion: sigInfo.Version,
+			SigKeySignature:   s.PMSE.KeySignature,
+		},
+	}
+
+	return json.Marshal(out)
+}
+
+func (s *ManifestBG) UnmarshalJSON(data []byte) error {
+	type signatureJSON struct {
+		StructInfoID      cbnt.StructureID  `json:"StructInfoID"`
+		StructInfoVersion uint8             `json:"StructInfoVersion"`
+		SigKeySignature   cbnt.KeySignature `json:"sigKeySignature"`
+	}
+
+	type manifestBGJSON struct {
+		BPMHBG BPMHBG        `json:"bpmHeader"`
+		SE     []SEBG        `json:"bpmSE"`
+		PME    *PMBG         `json:"bpmPME,omitempty"`
+		PMSE   signatureJSON `json:"bpmSignature"`
+	}
+
+	var in manifestBGJSON
+	if err := json.Unmarshal(data, &in); err != nil {
+		return err
+	}
+
+	s.BPMHBG = in.BPMHBG
+	s.SE = in.SE
+	s.PME = in.PME
+
+	structInfo := cbnt.StructInfoBG{
+		ID:      in.PMSE.StructInfoID,
+		Version: in.PMSE.StructInfoVersion,
+	}
+	if structInfo.ID == (cbnt.StructureID{}) {
+		copy(structInfo.ID[:], []byte(StructureIDSignature))
+	}
+	if structInfo.Version == 0 {
+		structInfo.Version = 0x10
+	}
+
+	s.PMSE = Signature{
+		StructInfo:   structInfo,
+		KeySignature: in.PMSE.SigKeySignature,
+	}
+
+	return nil
+}
+
 // PrettyString: Boot Policy Manifest
 type ManifestCBnT struct {
 	cbnt.Common
@@ -96,6 +170,101 @@ type ManifestCBnT struct {
 	//
 	// PrettyString: PMSE: Signature
 	PMSE Signature `json:"bpmSignature"`
+}
+
+func (s ManifestCBnT) MarshalJSON() ([]byte, error) {
+	type signatureJSON struct {
+		StructInfoID          cbnt.StructureID  `json:"StructInfoID"`
+		StructInfoVersion     uint8             `json:"StructInfoVersion"`
+		StructInfoVariable0   uint8             `json:"StructInfoVariable0"`
+		StructInfoElementSize uint16            `json:"StructInfoElementSize"`
+		SigKeySignature       cbnt.KeySignature `json:"sigKeySignature"`
+	}
+
+	type manifestCBnTJSON struct {
+		BPMHCBnT BPMHCBnT      `json:"bpmHeader"`
+		SE       []SECBnT      `json:"bpmSE"`
+		TXTE     *TXT          `json:"bpmTXTE,omitempty"`
+		Res      *Reserved     `json:"bpmReserved,omitempty"`
+		PCDE     *PCD          `json:"bpmPCDE,omitempty"`
+		PME      *PMCBnT       `json:"bpmPME,omitempty"`
+		PMSE     signatureJSON `json:"bpmSignature"`
+	}
+
+	sigInfo := cbnt.StructInfoCBNT{}
+	if info, ok := s.PMSE.StructInfo.(cbnt.StructInfoCBNT); ok {
+		sigInfo = info
+	}
+
+	out := manifestCBnTJSON{
+		BPMHCBnT: s.BPMHCBnT,
+		SE:       s.SE,
+		TXTE:     s.TXTE,
+		Res:      s.Res,
+		PCDE:     s.PCDE,
+		PME:      s.PME,
+		PMSE: signatureJSON{
+			StructInfoID:          sigInfo.ID,
+			StructInfoVersion:     sigInfo.Version,
+			StructInfoVariable0:   sigInfo.Variable0,
+			StructInfoElementSize: sigInfo.ElementSize,
+			SigKeySignature:       s.PMSE.KeySignature,
+		},
+	}
+
+	return json.Marshal(out)
+}
+
+func (s *ManifestCBnT) UnmarshalJSON(data []byte) error {
+	type signatureJSON struct {
+		StructInfoID          cbnt.StructureID  `json:"StructInfoID"`
+		StructInfoVersion     uint8             `json:"StructInfoVersion"`
+		StructInfoVariable0   uint8             `json:"StructInfoVariable0"`
+		StructInfoElementSize uint16            `json:"StructInfoElementSize"`
+		SigKeySignature       cbnt.KeySignature `json:"sigKeySignature"`
+	}
+
+	type manifestCBnTJSON struct {
+		BPMHCBnT BPMHCBnT      `json:"bpmHeader"`
+		SE       []SECBnT      `json:"bpmSE"`
+		TXTE     *TXT          `json:"bpmTXTE,omitempty"`
+		Res      *Reserved     `json:"bpmReserved,omitempty"`
+		PCDE     *PCD          `json:"bpmPCDE,omitempty"`
+		PME      *PMCBnT       `json:"bpmPME,omitempty"`
+		PMSE     signatureJSON `json:"bpmSignature"`
+	}
+
+	var in manifestCBnTJSON
+	if err := json.Unmarshal(data, &in); err != nil {
+		return err
+	}
+
+	s.BPMHCBnT = in.BPMHCBnT
+	s.SE = in.SE
+	s.TXTE = in.TXTE
+	s.Res = in.Res
+	s.PCDE = in.PCDE
+	s.PME = in.PME
+
+	structInfo := cbnt.StructInfoCBNT{
+		ID:          in.PMSE.StructInfoID,
+		Version:     in.PMSE.StructInfoVersion,
+		Variable0:   in.PMSE.StructInfoVariable0,
+		ElementSize: in.PMSE.StructInfoElementSize,
+	}
+	if structInfo.ID == (cbnt.StructureID{}) {
+		copy(structInfo.ID[:], []byte(StructureIDSignature))
+	}
+	if structInfo.Version == 0 {
+		structInfo.Version = 0x20
+	}
+
+	s.PMSE = Signature{
+		StructInfo:   structInfo,
+		KeySignature: in.PMSE.SigKeySignature,
+	}
+
+	return nil
 }
 
 // fieldIndexByStructID returns the position index within

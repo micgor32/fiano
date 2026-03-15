@@ -241,10 +241,10 @@ func (s *PCD) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) s
 	var lines []string
 	lines = append(lines, base)
 	if s.StructInfoCBNT.Version > 0x21 && s.PDRS != nil {
-		lines = append(lines, strings.TrimSpace(s.PDRS.PrettyString(depth+1, true, opts...)))
+		lines = append(lines, s.PDRS.PrettyString(depth, true, opts...))
 	}
 	if s.StructInfoCBNT.Version > 0x21 && s.CNBS != nil {
-		lines = append(lines, strings.TrimSpace(s.CNBS.PrettyString(depth+1, true, opts...)))
+		lines = append(lines, s.CNBS.PrettyString(depth, true, opts...))
 	}
 
 	return strings.Join(lines, "\n")
@@ -253,7 +253,7 @@ func (s *PCD) PrettyString(depth uint, withHeader bool, opts ...pretty.Option) s
 // PDRS
 type PDRS struct {
 	cbnt.Common
-	cbnt.StructInfoCBNT `id:"__PDRS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize() - 12)"`
+	cbnt.StructInfoCBNT `id:"__PDRS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
 	Data                []byte `json:"pdrsData"`
 }
 
