@@ -651,6 +651,10 @@ func (s *ManifestCBnT) Validate() error {
 		return fmt.Errorf("error on field 'PMSE': %w", err)
 	}
 
+	if err := s.PCDE.Validate(); err != nil {
+		return fmt.Errorf("error on field 'PCDE': %w", err)
+	}
+
 	return nil
 }
 
