@@ -227,25 +227,36 @@ func readBytesFromReader(r io.Reader, size uint64) ([]byte, error) {
 	return result, nil
 }
 
-// EntryDataSegmentSize returns the coordinates of the data segment size associates with the entry.
-func EntryDataSegmentSize(entry Entry, firmware io.ReadSeeker) (uint64, error) {
-	if sizeGetter, ok := entry.(EntryCustomGetDataSegmentSizer); ok {
-		return sizeGetter.CustomGetDataSegmentSize(firmware)
-	} else {
-		return entry.GetEntryBase().Headers.mostCommonGetDataSegmentSize(), nil
+func FirmwareSizeUsedFromSeeker(firmware io.ReadSeeker) (uint64, error) {
+	firmwareSize, err := firmware.Seek(0, io.SeekEnd)
+	if err != nil || firmwareSize < 0 {
+		return 0, fmt.Errorf("unable to determine firmware size; result: %d; err: %w", firmwareSize, err)
 	}
+
+	firmwareSizeUsed := uint64(firmwareSize)
+	if ifdSize, ifdErr := flashSizeFromIFD(firmware, firmwareSizeUsed); ifdErr == nil && ifdSize > 0 && ifdSize <= firmwareSizeUsed {
+		firmwareSizeUsed = ifdSize
+	}
+
+	return firmwareSizeUsed, nil
 }
 
-// EntryDataSegmentCoordinates returns the coordinates of the data segment coordinates associates with the entry.
-func EntryDataSegmentCoordinates(entry Entry, firmware io.ReadSeeker) (uint64, uint64, error) {
+func EntryDataSegmentSize(entry Entry, firmware io.ReadSeeker, firmwareSizeUsed uint64) (uint64, error) {
+	if sizeGetter, ok := entry.(EntryCustomGetDataSegmentSizer); ok {
+		return sizeGetter.CustomGetDataSegmentSize(firmware)
+	}
+	return entry.GetEntryBase().Headers.mostCommonGetDataSegmentSize(), nil
+}
+
+func EntryDataSegmentCoordinates(entry Entry, firmware io.ReadSeeker, firmwareSizeUsed uint64) (uint64, uint64, error) {
 	var err error
 
-	offset, addErr := entry.GetEntryBase().Headers.getDataSegmentOffset(firmware)
+	offset, addErr := entry.GetEntryBase().Headers.getDataSegmentOffset(firmwareSizeUsed)
 	if addErr != nil {
 		err = multierror.Append(err, fmt.Errorf("unable to get data segment offset: %w", err))
 	}
 
-	size, addErr := EntryDataSegmentSize(entry, firmware)
+	size, addErr := EntryDataSegmentSize(entry, firmware, firmwareSizeUsed)
 	if addErr != nil {
 		err = multierror.Append(err, fmt.Errorf("unable to get data segment size: %w", err))
 	}
@@ -254,20 +265,23 @@ func EntryDataSegmentCoordinates(entry Entry, firmware io.ReadSeeker) (uint64, u
 }
 
 // If possible then make a slice of existing data; if not then copy.
-func sliceOrCopyBytesFrom(r io.ReadSeeker, startIdx, endIdx uint64) ([]byte, error) {
+func sliceOrCopyBytesFrom(r io.ReadSeeker, startIdx, endIdx, firmwareSizeUsed uint64) ([]byte, error) {
 	switch r := r.(type) {
 	case *bytesextra.ReadWriteSeeker:
-		if err := check.BytesRange(uint(len(r.Storage)), int(startIdx), int(endIdx)); err != nil {
+		if err := check.BytesRange(uint(firmwareSizeUsed), int(startIdx), int(endIdx)); err != nil {
 			return nil, err
 		}
 		return r.Storage[startIdx:endIdx], nil
 	default:
+		if err := check.BytesRange(uint(firmwareSizeUsed), int(startIdx), int(endIdx)); err != nil {
+			return nil, err
+		}
 		return copyBytesFrom(r, startIdx, endIdx)
 	}
 }
 
-func entryInitDataSegmentBytes(entry Entry, firmware io.ReadSeeker) error {
-	dataSegmentOffset, dataSegmentSize, err := EntryDataSegmentCoordinates(entry, firmware)
+func entryInitDataSegmentBytes(entry Entry, firmware io.ReadSeeker, firmwareSizeUsed uint64) error {
+	dataSegmentOffset, dataSegmentSize, err := EntryDataSegmentCoordinates(entry, firmware, firmwareSizeUsed)
 	if err != nil {
 		return fmt.Errorf("unable to get data segment coordinates of entry %T: %w", entry, err)
 	}
@@ -278,7 +292,7 @@ func entryInitDataSegmentBytes(entry Entry, firmware io.ReadSeeker) error {
 
 	base := entry.GetEntryBase()
 
-	base.DataSegmentBytes, err = sliceOrCopyBytesFrom(firmware, dataSegmentOffset, dataSegmentOffset+dataSegmentSize)
+	base.DataSegmentBytes, err = sliceOrCopyBytesFrom(firmware, dataSegmentOffset, dataSegmentOffset+dataSegmentSize, firmwareSizeUsed)
 	if err != nil {
 		return fmt.Errorf("unable to copy data segment bytes from the firmware image (offset:%d, size:%d): %w", dataSegmentOffset, dataSegmentSize, err)
 	}
@@ -287,7 +301,7 @@ func entryInitDataSegmentBytes(entry Entry, firmware io.ReadSeeker) error {
 }
 
 // NewEntry returns a new entry using headers and firmware image
-func NewEntry(hdr *EntryHeaders, firmware io.ReadSeeker) Entry {
+func NewEntry(hdr *EntryHeaders, firmware io.ReadSeeker, firmwareSizeUsed uint64) Entry {
 	entry := hdr.Type().newEntry()
 	if entry == nil {
 		entry = &EntryUnknown{}
@@ -295,7 +309,7 @@ func NewEntry(hdr *EntryHeaders, firmware io.ReadSeeker) Entry {
 	base := entry.GetEntryBase()
 	base.Headers = *hdr
 
-	err := entryInitDataSegmentBytes(entry, firmware)
+	err := entryInitDataSegmentBytes(entry, firmware, firmwareSizeUsed)
 	if err != nil {
 		base.HeadersErrors = append(base.HeadersErrors, err)
 	}

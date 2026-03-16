@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/linuxboot/fiano/pkg/intel/metadata/bg/bgbootpolicy"
+	// "github.com/linuxboot/fiano/pkg/intel/metadata/bg/bgbootpolicy"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt/bootpolicy"
 )
@@ -41,7 +41,7 @@ func (entry *EntryBootPolicyManifestRecord) Reader() *bytes.Reader {
 }
 
 // ParseData creates EntryBootPolicyManifestRecord from EntryBootPolicyManifest
-func (entry *EntryBootPolicyManifestRecord) ParseData() (*bgbootpolicy.Manifest, *cbntbootpolicy.Manifest, error) {
+func (entry *EntryBootPolicyManifestRecord) ParseData() (*cbntbootpolicy.Manifest, *cbntbootpolicy.Manifest, error) {
 	r := bytes.NewReader(entry.DataSegmentBytes)
 	version, err := cbnt.DetectBGV(r)
 	if err != nil {
@@ -49,19 +49,36 @@ func (entry *EntryBootPolicyManifestRecord) ParseData() (*bgbootpolicy.Manifest,
 	}
 	switch version {
 	case cbnt.Version10:
-		manifest := bgbootpolicy.NewManifest()
+		manifest, err := cbntbootpolicy.NewManifest(cbnt.Version10)
+		if err != nil {
+			return nil, nil, nil
+		}
 		_, err = manifest.ReadFrom(r)
 		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, nil, err
 		}
-		return manifest, nil, nil
+		return &manifest, nil, nil
 	case cbnt.Version20:
-		manifest := cbntbootpolicy.NewManifest()
+		manifest, err := cbntbootpolicy.NewManifest(cbnt.Version20)
+		if err != nil {
+			return nil, nil, err
+		}
 		_, err = manifest.ReadFrom(r)
 		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, nil, err
 		}
-		return nil, manifest, nil
+		return nil, &manifest, nil
+
+	case cbnt.Version21:
+		manifest, err := cbntbootpolicy.NewManifest(cbnt.Version21)
+		if err != nil {
+			return nil, nil, err
+		}
+		_, err = manifest.ReadFrom(r)
+		if err != nil && !errors.Is(err, io.EOF) {
+			return nil, nil, err
+		}
+		return nil, &manifest, nil
 	default:
 		return nil, nil, fmt.Errorf("failed to parse BootPolicyManifest, err: %v", err)
 	}
@@ -69,7 +86,7 @@ func (entry *EntryBootPolicyManifestRecord) ParseData() (*bgbootpolicy.Manifest,
 
 // ParseBootPolicyManifest returns a boot policy manifest if it was able to
 // parse one.
-func (table Table) ParseBootPolicyManifest(firmware []byte) (*bgbootpolicy.Manifest, *cbntbootpolicy.Manifest, error) {
+func (table Table) ParseBootPolicyManifest(firmware []byte) (*cbntbootpolicy.Manifest, *cbntbootpolicy.Manifest, error) {
 	hdr := table.First(EntryTypeBootPolicyManifest)
 	if hdr == nil {
 		return nil, nil, ErrNotFound{}

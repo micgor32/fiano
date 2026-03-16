@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/linuxboot/fiano/pkg/intel/metadata/bg/bgkey"
 	"github.com/linuxboot/fiano/pkg/intel/metadata/cbnt"
 	keymanifest "github.com/linuxboot/fiano/pkg/intel/metadata/cbnt/keymanifest"
 )
@@ -41,7 +40,7 @@ func (entry *EntryKeyManifestRecord) Reader() *bytes.Reader {
 }
 
 // ParseData creates EntryKeyManifestRecord from EntryKeyManifest
-func (entry *EntryKeyManifestRecord) ParseData() (*bgkey.Manifest, *keymanifest.Manifest, error) {
+func (entry *EntryKeyManifestRecord) ParseData() (*keymanifest.Manifest, *keymanifest.Manifest, error) {
 	r := bytes.NewReader(entry.DataSegmentBytes)
 	version, err := cbnt.DetectBGV(r)
 	if err != nil {
@@ -49,19 +48,25 @@ func (entry *EntryKeyManifestRecord) ParseData() (*bgkey.Manifest, *keymanifest.
 	}
 	switch version {
 	case cbnt.Version10:
-		manifest := bgkey.NewManifest()
+		manifest, err := keymanifest.NewManifest(cbnt.Version10)
+		if err != nil {
+			return nil, nil, err
+		}
 		_, err = manifest.ReadFrom(r)
 		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, nil, err
 		}
-		return manifest, nil, nil
+		return &manifest, nil, nil
 	case cbnt.Version20:
-		manifest := keymanifest.NewManifest()
+		manifest, err := keymanifest.NewManifest(cbnt.Version20)
+		if err != nil {
+			return nil, nil, err
+		}
 		_, err = manifest.ReadFrom(r)
 		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, nil, err
 		}
-		return nil, manifest, nil
+		return nil, &manifest, nil
 	default:
 		return nil, nil, fmt.Errorf("failed to parse KeyManifest, err: %v", err)
 	}
@@ -69,7 +74,7 @@ func (entry *EntryKeyManifestRecord) ParseData() (*bgkey.Manifest, *keymanifest.
 
 // ParseKeyManifest returns a key manifest if it was able to
 // parse one.
-func (table Table) ParseKeyManifest(firmware []byte) (*bgkey.Manifest, *keymanifest.Manifest, error) {
+func (table Table) ParseKeyManifest(firmware []byte) (*keymanifest.Manifest, *keymanifest.Manifest, error) {
 	hdr := table.First(EntryTypeKeyManifestRecord)
 	if hdr == nil {
 		return nil, nil, ErrNotFound{}

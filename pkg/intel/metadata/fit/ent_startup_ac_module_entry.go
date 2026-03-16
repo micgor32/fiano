@@ -23,7 +23,12 @@ type EntrySACM struct{ EntryBase }
 var _ EntryCustomGetDataSegmentSizer = (*EntrySACM)(nil)
 
 func (entry *EntrySACM) CustomGetDataSegmentSize(firmware io.ReadSeeker) (uint64, error) {
-	offset, err := entry.Headers.getDataSegmentOffset(firmware)
+	firmwareSizeUsed, err := FirmwareSizeUsedFromSeeker(firmware)
+	if err != nil {
+		return 0, fmt.Errorf("unable to detect firmware size: %w", err)
+	}
+
+	offset, err := entry.Headers.getDataSegmentOffset(firmwareSizeUsed)
 	if err != nil {
 		return 0, fmt.Errorf("unable to detect data segment offset: %w", err)
 	}
@@ -349,6 +354,28 @@ func (entryData EntrySACMDataCommon) KeySizeBinaryOffset() uint {
 	return 120
 }
 
+var entrySACMData0Size = uint(binary.Size(EntrySACMData0{}))
+
+type SACMDataRW interface {
+	EntrySACMData0 | EntrySACMData3 | EntrySACMData4 | EntrySACMData5
+}
+
+func readSACMData[T SACMDataRW](entryData *T, r io.Reader) (int64, error) {
+	err := binary.Read(r, binary.LittleEndian, entryData)
+	if err != nil {
+		return -1, err
+	}
+	return int64(binary.Size(*entryData)), nil
+}
+
+func writeSACMData[T SACMDataRW](entryData *T, w io.Writer) (int64, error) {
+	err := binary.Write(w, binary.LittleEndian, entryData)
+	if err != nil {
+		return -1, err
+	}
+	return int64(binary.Size(*entryData)), nil
+}
+
 // EntrySACMData0 is the structure for ACM of version 0.0.
 type EntrySACMData0 struct {
 	EntrySACMDataCommon
@@ -359,8 +386,6 @@ type EntrySACMData0 struct {
 	Scratch   [572]byte
 }
 
-var entrySACMData0Size = uint(binary.Size(EntrySACMData0{}))
-
 // Read parses the ACM v0 headers
 func (entryData *EntrySACMData0) Read(b []byte) (int, error) {
 	n, err := entryData.ReadFrom(bytesextra.NewReadWriteSeeker(b))
@@ -369,11 +394,7 @@ func (entryData *EntrySACMData0) Read(b []byte) (int, error) {
 
 // ReadFrom parses the ACM v0 headers
 func (entryData *EntrySACMData0) ReadFrom(r io.Reader) (int64, error) {
-	err := binary.Read(r, binary.LittleEndian, entryData)
-	if err != nil {
-		return -1, err
-	}
-	return int64(entrySACMData0Size), nil
+	return readSACMData(entryData, r)
 }
 
 // Write compiles the SACM v0 headers into a binary representation
@@ -384,11 +405,7 @@ func (entryData *EntrySACMData0) Write(b []byte) (int, error) {
 
 // WriteTo compiles the SACM v0 headers into a binary representation
 func (entryData *EntrySACMData0) WriteTo(w io.Writer) (int64, error) {
-	err := binary.Write(w, binary.LittleEndian, entryData)
-	if err != nil {
-		return -1, err
-	}
-	return int64(entrySACMData0Size), nil
+	return writeSACMData(entryData, w)
 }
 
 // GetRSAPubKey returns the RSA public key
@@ -430,19 +447,9 @@ type EntrySACMData3 struct {
 
 var entrySACMData3Size = uint(binary.Size(EntrySACMData3{}))
 
-// Read parses the ACM v3 headers
-func (entryData *EntrySACMData3) Read(b []byte) (int, error) {
-	n, err := entryData.ReadFrom(bytesextra.NewReadWriteSeeker(b))
-	return int(n), err
-}
-
 // ReadFrom parses the ACM v3 headers
 func (entryData *EntrySACMData3) ReadFrom(r io.Reader) (int64, error) {
-	err := binary.Read(r, binary.LittleEndian, entryData)
-	if err != nil {
-		return -1, err
-	}
-	return int64(entrySACMData3Size), nil
+	return readSACMData(entryData, r)
 }
 
 // Write compiles the SACM v3 headers into a binary representation
@@ -453,11 +460,7 @@ func (entryData *EntrySACMData3) Write(b []byte) (int, error) {
 
 // WriteTo compiles the SACM v3 headers into a binary representation
 func (entryData *EntrySACMData3) WriteTo(w io.Writer) (int64, error) {
-	err := binary.Write(w, binary.LittleEndian, entryData)
-	if err != nil {
-		return -1, err
-	}
-	return int64(entrySACMData3Size), nil
+	return writeSACMData(entryData, w)
 }
 
 // GetRSAPubKey returns the RSA public key
@@ -500,8 +503,6 @@ type EntrySACMData4 struct {
 	Scratch    [3584]byte
 }
 
-var entrySACMData4Size = uint(binary.Size(EntrySACMData4{}))
-
 // Read parses the ACM v3 headers
 func (entryData *EntrySACMData4) Read(b []byte) (int, error) {
 	n, err := entryData.ReadFrom(bytesextra.NewReadWriteSeeker(b))
@@ -510,11 +511,7 @@ func (entryData *EntrySACMData4) Read(b []byte) (int, error) {
 
 // ReadFrom parses the ACM v3 headers
 func (entryData *EntrySACMData4) ReadFrom(r io.Reader) (int64, error) {
-	err := binary.Read(r, binary.LittleEndian, entryData)
-	if err != nil {
-		return -1, err
-	}
-	return int64(entrySACMData3Size), nil
+	return readSACMData(entryData, r)
 }
 
 // Write compiles the SACM v3 headers into a binary representation
@@ -525,11 +522,7 @@ func (entryData *EntrySACMData4) Write(b []byte) (int, error) {
 
 // WriteTo compiles the SACM v3 headers into a binary representation
 func (entryData *EntrySACMData4) WriteTo(w io.Writer) (int64, error) {
-	err := binary.Write(w, binary.LittleEndian, entryData)
-	if err != nil {
-		return -1, err
-	}
-	return int64(entrySACMData4Size), nil
+	return writeSACMData(entryData, w)
 }
 
 // GetRSAPubKey returns the RSA public key
@@ -571,8 +564,6 @@ type EntrySACMData5 struct {
 	Scratch    [3584]byte
 }
 
-var entrySACMData5Size = uint(binary.Size(EntrySACMData5{}))
-
 // Read parses the ACM v5 headers
 func (entryData *EntrySACMData5) Read(b []byte) (int, error) {
 	n, err := entryData.ReadFrom(bytesextra.NewReadWriteSeeker(b))
@@ -581,11 +572,7 @@ func (entryData *EntrySACMData5) Read(b []byte) (int, error) {
 
 // ReadFrom parses the ACM v3 headers
 func (entryData *EntrySACMData5) ReadFrom(r io.Reader) (int64, error) {
-	err := binary.Read(r, binary.LittleEndian, entryData)
-	if err != nil {
-		return -1, err
-	}
-	return int64(entrySACMData5Size), nil
+	return readSACMData(entryData, r)
 }
 
 // Write compiles the SACM v3 headers into a binary representation
@@ -596,11 +583,7 @@ func (entryData *EntrySACMData5) Write(b []byte) (int, error) {
 
 // WriteTo compiles the SACM v3 headers into a binary representation
 func (entryData *EntrySACMData5) WriteTo(w io.Writer) (int64, error) {
-	err := binary.Write(w, binary.LittleEndian, entryData)
-	if err != nil {
-		return -1, err
-	}
-	return int64(entrySACMData5Size), nil
+	return writeSACMData(entryData, w)
 }
 
 // GetRSAPubKey returns the RSA public key
