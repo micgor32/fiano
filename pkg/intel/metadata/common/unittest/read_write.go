@@ -68,9 +68,9 @@ func ManifestReadWrite(t *testing.T, m cbnt.Manifest, testDataFilePath string) {
 
 	// Getters
 	//getValue
-	// l := m.Layout()
-	// field0 := l[0]
-	// val := field0.Value
+	l := m.Layout()
+	field0 := l[0]
+	val := field0.Value
 
 	// So same as above we don't know here what exact type we are testing, but we know it should implement getter and setter.
 	// Thus we can make sneaky type assertion to an interface that only has these methids, and let the test fail
@@ -84,11 +84,23 @@ func ManifestReadWrite(t *testing.T, m cbnt.Manifest, testDataFilePath string) {
 	accessor, ok := m.(structInfoAccessor)
 	require.True(t, ok, "Manifest must implement GetStructInfo() and SetStructInfo()")
 
-	// originalInfo := accessor.GetStructInfo()
-	// require.Equal(t, val(), originalInfo, "Getter should return the value from Layout")
+	originalInfo := accessor.GetStructInfo()
+	type nestedStructInfoAccessor interface {
+		GetStructInfo() cbnt.StructInfo
+	}
 
-	// accessor.SetStructInfo(val().(cbnt.StructInfo))
-	// require.Equal(t, originalInfo, accessor.GetStructInfo(), "Getter should match the value just set")
+	var expectedInfo cbnt.StructInfo
+	if nestedAccessor, ok := val().(nestedStructInfoAccessor); ok {
+		expectedInfo = nestedAccessor.GetStructInfo()
+	} else {
+		var structInfoOK bool
+		expectedInfo, structInfoOK = val().(cbnt.StructInfo)
+		require.True(t, structInfoOK, "Layout[0] must be StructInfo or expose GetStructInfo()")
+	}
+	require.Equal(t, expectedInfo, originalInfo, "Getter should return the value from Layout")
+
+	accessor.SetStructInfo(expectedInfo)
+	require.Equal(t, originalInfo, accessor.GetStructInfo(), "Getter should match the value just set")
 
 	// Validate
 	err = m.Validate()
@@ -113,8 +125,6 @@ func ManifestReadWrite(t *testing.T, m cbnt.Manifest, testDataFilePath string) {
 	require.NoError(t, err, "Failed to read from pipe")
 	actualOutput := buf.String()
 
-	// This really depends on what testDataFilePath was used, but since this is supposed to be generic
-	// as possible, let's cover both. TODO: think of a better way so that we can also include BPM here
 	expectedKMUnsigned := fmt.Sprintf("%v\n  --KeyAndSignature--\n\tKey Manifest not signed!\n\n",
 		m.PrettyString(1, true, pretty.OptionOmitKeySignature(true)))
 
