@@ -26,3 +26,11 @@ func TestReadWriteCBNT(t *testing.T) {
 	}
 	unittest.ManifestReadWrite(t, m, "testdata/bpm20.bin")
 }
+
+func TestReadWriteCBNT21(t *testing.T) {
+	m, err := NewManifest(cbnt.Version21)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	unittest.ManifestReadWrite(t, m, "testdata/bpm21.bin")
+}
