@@ -1,4 +1,4 @@
-# Intel Metadata
+# Intel BG/CBnT Metadata
 
 This directory contains reusable definitions of common BG/CBnT structures and Boot Policy and Key Manifests for Intel platforms.
 
