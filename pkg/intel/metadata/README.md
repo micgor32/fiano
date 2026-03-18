@@ -385,3 +385,31 @@ extend the `ManifestFieldType` constants and add corresponding handling in both
 `Common.ReadFrom()` and `Common.WriteTo()`.
 
 ### Extending a Structure
+Let's take `SECBnT` as an example here, and assume that the update specification adds a field that stores the size of `IBBSegments`. Then we need to adapt the following:
+```go
+type SECBnT struct {
+	cbnt.Common
+	cbnt.StructInfoCBNT `id:"__IBBS__" version:"0x20" var0:"0" var1:"uint16(s.TotalSize())"`
+	Reserved0           [1]byte   `require:"0" json:"seReserved0,omitempty"`
+	SetNumber           uint8     `require:"0" json:"seSetNumber,omitempty"`
+	Reserved1           [1]byte   `require:"0" json:"seReserved1,omitempty"`
+	PBETValue           PBETValue `json:"sePBETValue"`
+	Flags               SEFlags   `json:"seFlags"`
+	IBBMCHBAR uint64 `json:"seIBBMCHBAR"`
+	VTdBAR uint64 `json:"seVTdBAR"`
+	DMAProtBase0 uint32 `json:"seDMAProtBase0"`
+	DMAProtLimit0 uint32 `json:"seDMAProtLimit0"`
+	DMAProtBase1 uint64 `json:"seDMAProtBase1"`
+	DMAProtLimit1 uint64 `json:"seDMAProtLimit1"`
+	PostIBBHash cbnt.HashStructure `json:"sePostIBBHash"`
+	IBBEntryPoint uint32 `json:"seIBBEntry"`
+	DigestList cbnt.HashList `json:"seDigestList"`
+	OBBHash cbnt.HashStructure `json:"seOBBHash"`
+	Reserved2 [3]byte `require:"0" json:"seReserved2,omitempty"`
+	// NEW: size of IBBSegments
+	SizeOfIBBSeg [2]byte `json:"seSizeOfIBBSeg,omitemptu"`
+	IBBSegments []IBBSegment `countType:"uint8" json:"seIBBSegments,omitempty"`
+}
+```
+
+
