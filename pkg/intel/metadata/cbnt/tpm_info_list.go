@@ -24,7 +24,6 @@ type TPMInfoList struct {
 // all default values set.
 func NewTPMInfoList() *TPMInfoList {
 	s := &TPMInfoList{}
-	s.Rehash()
 	return s
 }
 
@@ -38,20 +37,9 @@ func (s *TPMInfoList) ReadFrom(r io.Reader) (int64, error) {
 	return totalN, nil
 }
 
-// RehashRecursive calls Rehash (see below) recursively.
-func (s *TPMInfoList) RehashRecursive() {
-	s.Rehash()
-}
-
-// Rehash sets values which are calculated automatically depending on the rest
-// data. It is usually about the total size field of an element.
-func (s *TPMInfoList) Rehash() {
-}
-
 // WriteTo writes the TPMInfoList into 'w' in format defined in
 // the document #575623.
 func (s *TPMInfoList) WriteTo(w io.Writer) (int64, error) {
-	s.Rehash()
 	return s.Common.WriteTo(w, s)
 }
 

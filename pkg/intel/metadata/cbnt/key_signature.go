@@ -91,7 +91,6 @@ func NewKeySignature() *KeySignature {
 	s.Key = *NewKey()
 	// Recursively initializing a child structure:
 	s.Signature = *NewSignature()
-	s.Rehash()
 	return s
 }
 
@@ -119,22 +118,9 @@ func (s *KeySignature) ReadFrom(r io.Reader) (int64, error) {
 	return s.Common.ReadFrom(r, s)
 }
 
-// RehashRecursive calls Rehash (see below) recursively.
-func (s *KeySignature) RehashRecursive() {
-	s.Key.Rehash()
-	s.Signature.Rehash()
-	s.Rehash()
-}
-
-// Rehash sets values which are calculated automatically depending on the rest
-// data. It is usually about the total size field of an element.
-func (s *KeySignature) Rehash() {
-}
-
 // WriteTo writes the KeySignature into 'w' in format defined in
 // the document #575623.
 func (s *KeySignature) WriteTo(w io.Writer) (int64, error) {
-	s.Rehash()
 	return s.Common.WriteTo(w, s)
 }
 

@@ -190,7 +190,6 @@ func NewHashStructure(alg Algorithm) *HashStructure {
 	s := &HashStructure{}
 	// For bg pkg, the default one
 	s.HashAlg = alg
-	s.Rehash()
 	return s
 }
 
@@ -204,20 +203,9 @@ func (s *HashStructure) ReadFrom(r io.Reader) (int64, error) {
 	return totalN, nil
 }
 
-// RehashRecursive calls Rehash (see below) recursively.
-func (s *HashStructure) RehashRecursive() {
-	s.Rehash()
-}
-
-// Rehash sets values which are calculated automatically depending on the rest
-// data. It is usually about the total size field of an element.
-func (s *HashStructure) Rehash() {
-}
-
 // WriteTo writes the HashStructure into 'w' in format defined in
 // the document #575623.
 func (s *HashStructure) WriteTo(w io.Writer) (int64, error) {
-	s.Rehash()
 	return s.Common.WriteTo(w, s)
 }
 
