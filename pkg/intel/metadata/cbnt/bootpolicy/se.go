@@ -470,9 +470,7 @@ func (s *SECBnT) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 
 // RehashRecursive calls Rehash (see below) recursively.
 func (s *SECBnT) RehashRecursive() {
-	s.PostIBBHash.Rehash()
 	s.DigestList.Rehash()
-	s.OBBHash.Rehash()
 	s.Rehash()
 }
 

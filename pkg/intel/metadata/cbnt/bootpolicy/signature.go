@@ -123,16 +123,9 @@ func (s *Signature) ReadFromHelper(r io.Reader, info bool) (int64, error) {
 	return s.Common.ReadFrom(r, cbnt.DummyLayout{Fields: l})
 }
 
-// RehashRecursive calls Rehash (see below) recursively.
-func (s *Signature) RehashRecursive() {
-	s.KeySignature.Rehash()
-	s.Rehash()
-}
-
 // WriteTo writes the Signature into 'w' in format defined in
 // the document #575623.
 func (s *Signature) WriteTo(w io.Writer) (int64, error) {
-	s.Rehash()
 	return s.Common.WriteTo(w, s)
 }
 

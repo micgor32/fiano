@@ -482,7 +482,6 @@ func (s *ManifestBG) ReadFrom(r io.Reader) (returnN int64, returnErr error) {
 }
 
 func (s *ManifestBG) RehashRecursive() {
-	s.PMSE.Rehash()
 	s.Rehash()
 }
 
@@ -923,7 +922,6 @@ func (s *ManifestCBnT) RehashRecursive() {
 	if s.PME != nil {
 		s.PME.Rehash()
 	}
-	s.PMSE.Rehash()
 	s.Rehash()
 }
 
