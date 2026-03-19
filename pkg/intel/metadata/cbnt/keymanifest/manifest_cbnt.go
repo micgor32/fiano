@@ -155,7 +155,6 @@ func (s *CBnTManifest) ReadFrom(r io.Reader) (int64, error) {
 
 // RehashRecursive calls Rehash (see below) recursively.
 func (s *CBnTManifest) RehashRecursive() {
-	s.KeyAndSignature.Rehash()
 	s.Rehash()
 }
 

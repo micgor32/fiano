@@ -132,17 +132,6 @@ func (s *Hash) ReadFrom(r io.Reader) (int64, error) {
 	return totalN, nil
 }
 
-// RehashRecursive calls Rehash (see below) recursively.
-func (s *Hash) RehashRecursive() {
-	s.Digest.Rehash()
-	// s.Rehash()
-}
-
-// // Rehash sets values which are calculated automatically depending on the rest
-// // data. It is usually about the total size field of an element.
-// func (s *Hash) Rehash() {
-// }
-
 // WriteTo writes the Hash into 'w' in format defined in
 // the document #575623.
 func (s *Hash) WriteTo(w io.Writer) (int64, error) {

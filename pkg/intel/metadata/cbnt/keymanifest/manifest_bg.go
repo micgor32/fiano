@@ -106,12 +106,6 @@ func (s *BGManifest) ReadFrom(r io.Reader) (int64, error) {
 	return s.Common.ReadFrom(r, s)
 }
 
-// RehashRecursive calls Rehash (see below) recursively.
-func (s *BGManifest) RehashRecursive() {
-	s.BPKey.Rehash()
-	s.KeyAndSignature.Rehash()
-}
-
 // WriteTo writes the Manifest into 'w' in format defined in
 // the document #575623.
 func (s *BGManifest) WriteTo(w io.Writer) (int64, error) {
